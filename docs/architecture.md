@@ -9,10 +9,9 @@ Use a modular monorepo and a modular monolith with three independently runnable 
 ```mermaid
 flowchart LR
   User[Tailnet user] --> TS[Tailscale Serve: private HTTPS and identity]
-  TS --> Web[Web editor]
-  TS --> API[Backend API]
+  TS --> Web[Web editor and same-origin identity gateway]
   TS -->|signed upload/download endpoint| Store[(Garage S3-compatible storage)]
-  Web -->|JSON + signed URL requests| API[Backend API]
+  Web -->|trusted private JSON hop| API[Backend API]
   API --> DB[(PostgreSQL)]
   API --> Temporal[Self-hosted Temporal]
   Temporal --> WorkflowW[Workflow worker]
@@ -39,7 +38,7 @@ flowchart LR
   Translation --> Telemetry
 ```
 
-All nodes except the cloud translation LLM run on the local host or its container VM. Tailscale Funnel is disabled. Application and infrastructure ports bind to loopback or a private container network; only explicit Tailscale Serve listeners are reachable from the tailnet.
+All nodes except the cloud translation LLM run on the local host or its container VM. Tailscale Funnel is disabled. The tailnet exposes the web origin and a dedicated signed-object listener. The web route handler is the identity gateway for `/api/backend/v1/...`; the API is not a separate browser-facing Serve target. Application and infrastructure ports bind to loopback or a private container network.
 
 ## Runtime responsibilities
 
@@ -94,9 +93,11 @@ Exact versions belong in approved manifests and lockfiles, not these planning do
 
 ## Key request flows
 
-Uploads use a server-created upload intent with size/type constraints and a scoped object key. The browser uploads directly, then calls completion. The server verifies object metadata and schedules independent media validation before accepting it as usable.
+Uploads use a server-created upload intent with size/type constraints, quota reservation, and a scoped staging key. The browser uploads directly, then calls completion. The API verifies storage metadata, seals the object to its immutable key, and starts `media-ingest-v1`. The worker validates magic bytes and FFprobe limits, records the original artifact, generates a 720p H.264/AAC proxy, records lineage, and exposes a signed proxy URL only after publication.
 
-For the local deployment, the signed object endpoint is exposed on a dedicated Tailscale Serve HTTPS listener and is reachable only from permitted tailnet users. PostgreSQL, Temporal, Garage administration, metrics, and worker ports are not generally exposed to the tailnet.
+Phase 2 implements this as two Temporal activities (`validate-original-media-v1` and `generate-proxy-media-v1`) plus a bounded failure activity. Deterministic workflow IDs suppress duplicate starts; stage records and immutable artifact IDs make activity delivery retry-safe. Phase 3 extends this durable graph with OCR and review behavior.
+
+For the local deployment, the signed object endpoint is exposed on a dedicated Tailscale Serve HTTPS listener and is reachable only from permitted tailnet users. PostgreSQL, Temporal, the API listener, Garage administration, metrics, and worker ports are not generally exposed to the tailnet. See ADR-0013.
 
 Edits use immutable revisions and optimistic concurrency. A new translation or transcript revision invalidates only derived stages whose input fingerprints changed. Final render consumes a frozen render manifest containing exact artifact and revision IDs.
 

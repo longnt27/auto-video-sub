@@ -30,16 +30,17 @@
 | Paid translation only | Concentrates variable spend in the capability where cloud quality matters most | Easy/medium behind provider ports |
 | Versioned tone presets | Gives users predictable creative control without exposing arbitrary system prompts | Easy to add presets; prompt behavior is medium |
 | Structured subtitle styles with pinned fonts | Enables responsive HTML preview and reproducible FFmpeg/libass output | Easy/medium; renderer parity requires tests |
+| Same-origin tailnet identity gateway | Keeps browser JSON same-origin while requiring both trusted proxy IP and secret at the API | Medium |
 
 ## Decisions requiring human approval
 
 ### Gates for the affected roadmap phase
 
-1. **Host envelope:** the Phase 1 check ran natively on an Apple M4 Mac mini with 16 GiB RAM and Docker Desktop arm64. Only about 7.4 GiB host disk remained after images were pulled. Before media/model phases, confirm an always-awake setup, reclaim or add durable storage, set disk admission thresholds, and decide whether production uses Colima or another Linux container host.
-2. **Workflow platform:** approve self-hosted Temporal with PostgreSQL after the synthetic human-review/restart proof of concept; choose a simpler queue only if the host overhead is unacceptable.
+1. **Host envelope:** Phase 2 ran on an Apple M4 Mac mini with 16 GiB RAM and Docker Desktop arm64. Docker storage cleanup restored about 74 GiB free before the build, and the full PostgreSQL/Temporal/Garage/API/web/worker stack passed. Before local production, confirm always-awake behavior, durable-volume location, disk admission thresholds, and whether Docker Desktop, Colima, or another Linux container host is the supported runtime.
+2. **Workflow platform:** Phase 2 proves self-hosted Temporal can run the bounded media validation/proxy path on this host. Human-review signaling, restart/cancellation, replay, and operator recovery still require Phase 3 tests before the workflow choice is considered production-proven.
 3. **Tailnet use:** confirm this is personal/non-commercial use compatible with Tailscale's free plan. Commercial use requires a plan/license review or a self-hosted network/auth alternative.
 4. **Provider evaluation set:** approve RapidOCR/ONNX Runtime, VieNeu-TTS v3 Turbo through local ONNX, llama.cpp, and the paid translation provider/model. Set a hard translation budget and per-project token ceiling. PaddleOCR remains an accuracy comparison with explicit Apple Silicon packaging cost.
-5. **Supported input envelope:** maximum upload bytes, duration, resolution, frame rate, codecs/containers, and subtitle-band configuration.
+5. **Supported input envelope:** approve or revise Phase 2's provisional ceilings: 2 GiB, three hours, 3840×2160, 60 fps, 16 streams, and MP4/QuickTime/Matroska/WebM declarations. Codec policy, subtitle-band configuration, and measured concurrency remain open.
 6. **Data governance and backup:** retention periods, deletion SLA, translation-provider region/retention, backup frequency, and an independent external disk/NAS destination. A volume on the same physical host is not a backup.
 7. **Product audio policy:** default original-audio retain/reduce/remove behavior and whether source dialogue isolation is explicitly out of scope.
 8. **Local TTS promotion:** approve the exact VieNeu-TTS v3 Turbo code/model revision and one built-in preset voice only after license/provenance review, Vietnamese listening tests, content-integrity tests, and arm64-container benchmarks pass. Piper is rejected based on the owner's listening test; voice cloning remains out of scope.

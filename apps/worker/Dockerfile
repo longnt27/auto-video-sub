@@ -21,8 +21,13 @@ COPY packages/providers/src packages/providers/src
 RUN uv sync --frozen --no-dev --package auto-video-sub-worker
 
 FROM python:3.12.13-slim-bookworm AS runtime
+ARG FFMPEG_PACKAGE_VERSION=7:5.1.9-0+deb12u1
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
-RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid app app
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends "ffmpeg=${FFMPEG_PACKAGE_VERSION}" \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app app
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/apps/worker/src apps/worker/src

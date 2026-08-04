@@ -67,3 +67,17 @@ Coverage is a diagnostic, not the goal. Critical domain policy branches and auth
 ## Test command discovery
 
 Future contributors must read the checked-in `Makefile`, manifests, lockfiles, and CI rather than guessing commands. The exact supported setup and verification commands are maintained in [the development workflow](development-workflow.md). Paid-provider smoke tests are never part of `make check` or pull-request CI.
+
+## Phase 2 executable coverage
+
+Phase 2 currently provides:
+
+- pure domain tests for UUIDv7 and media-limit rules;
+- FastAPI use-case tests for project/upload flow, fail-closed identity, request size limits, and cross-owner denial;
+- a deterministic generated MP4 test for magic detection, FFprobe, and proxy output;
+- real PostgreSQL tests for identity/idempotency concurrency, ownership, quota-backed upload, original/proxy publication, and lineage foreign keys;
+- real Garage tests for signed PUT, sealing, download, and deletion;
+- Alembic upgrade/downgrade/upgrade and autogenerate-drift checks;
+- a full local-stack synthetic smoke from same-origin web gateway through signed upload, Temporal activities, FFmpeg, artifact registration, and signed preview download.
+
+Run `make check`, `make test-integration`, `make build`, `make stack-config`, and—after `make stack-up`—`make stack-smoke-phase2`. Phase 3 must add Temporal time-skipping/replay/cancellation tests; Phase 2's live smoke proves the happy durable path but does not claim those later scenarios.

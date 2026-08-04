@@ -1,21 +1,22 @@
 # Proposed repository structure
 
-The architecture was approved on 2026-08-04. Phase 1 now contains the composition roots and package boundaries below; product modules and fixtures are added only in their authorized roadmap phase.
+The architecture was approved on 2026-08-04. Phase 2 now contains the first vertical product slice through the existing package boundaries.
 
 ```text
 .
 ├── apps/
 │   ├── web/                       # Next.js editor and authenticated UI
 │   ├── api/                       # FastAPI composition root and HTTP transport
-│   └── worker/                    # Python worker entry points by queue profile
+│   └── worker/                    # Temporal media workflow and activity host
 ├── packages/
 │   ├── domain/                    # Pure Python aggregates, policies, value objects
 │   ├── application/               # Use cases, ports, commands, queries
 │   ├── infrastructure/            # PostgreSQL, object store, Temporal, telemetry
 │   ├── providers/                 # OCR, LLM, TTS, local rewrite, FFmpeg adapters
-│   └── contracts/                 # Added when the first reviewed product API contract exists
+│   └── contracts/                 # Deferred until generated cross-language contracts add value
 ├── db/
-│   └── migrations/                # Added with the first approved application schema
+│   ├── alembic.ini
+│   └── migrations/                # Reviewed Alembic revisions; never app-startup DDL
 ├── tests/
 │   ├── fixtures/media/            # Tiny deterministic, licensed/generated media
 │   ├── fixtures/fonts/            # Reviewed subset/provenance for render parity tests
@@ -28,7 +29,7 @@ The architecture was approved on 2026-08-04. Phase 1 now contains the compositio
 ├── deploy/                        # Local Compose topology and later deployment definitions
 ├── assets/
 │   └── fonts/                     # Added with the approved font catalog in Phase 6
-├── scripts/                       # Documented developer/operational scripts
+├── scripts/                       # Integration and synthetic full-stack smoke scripts
 ├── docs/
 │   └── adr/
 ├── .agents/skills/                # Repository-scoped Codex workflows
@@ -37,7 +38,7 @@ The architecture was approved on 2026-08-04. Phase 1 now contains the compositio
 
 ## Deployable applications
 
-`web`, `api`, and `worker` are deployable processes, not separate products or repositories. The worker application exposes multiple entry points from one codebase so deployments can assign independent concurrency and resources:
+`web`, `api`, and `worker` are deployable processes, not separate products or repositories. Phase 2 runs the `media` Temporal queue in the worker composition root. Later approved phases may run these profiles independently from the same codebase:
 
 - `workflow`: Temporal workflows and lightweight orchestration activities;
 - `media`: probe, proxy, extraction, and bounded audio transformations;
@@ -51,7 +52,7 @@ Queue profiles may later split further only when measured resource contention ju
 
 ```mermaid
 flowchart LR
-  Web[apps/web] --> Contracts[packages/contracts]
+  Web[apps/web] --> HTTP[Reviewed JSON API]
   API[apps/api] --> App[packages/application]
   Worker[apps/worker] --> App
   API --> Infra[packages/infrastructure]
@@ -63,6 +64,8 @@ flowchart LR
 ```
 
 Domain code imports only the standard library and explicitly approved domain utilities. Application code depends on domain types and defines ports. Infrastructure and providers implement those ports. Composition roots select implementations.
+
+Current Phase 2 placement is concrete: project/media rules and UUIDv7 IDs live in `domain`; project/upload use cases and ports in `application`; SQLAlchemy models/repositories, Garage, settings, and Temporal client in `infrastructure`; FFmpeg/ffprobe in `providers`; FastAPI auth/routes in `apps/api`; the deterministic workflow and activities in `apps/worker`; and the same-origin gateway/UI in `apps/web`.
 
 ## Package boundary rules
 

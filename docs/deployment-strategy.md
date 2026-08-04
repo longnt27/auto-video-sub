@@ -18,7 +18,7 @@ Tailscale runs on the host, outside the application containers. Application serv
 flowchart LR
   Client[Tailnet browser] -->|private HTTPS| Serve[Tailscale Serve]
   Serve -->|/| Web[Web container]
-  Serve -->|/api| API[API container]
+  Web -->|same-origin /api/backend| API[API container]
   Serve -->|signed URLs on dedicated HTTPS port| Garage[Garage object storage]
   API --> PG[(PostgreSQL)]
   API --> Temporal[Temporal Server]
@@ -47,8 +47,8 @@ PostgreSQL hosts separate application and Temporal databases with different cred
 
 ## Tailnet exposure and authentication
 
-- Tailscale Serve terminates private HTTPS and routes the web and API on one tailnet hostname. Funnel stays disabled.
-- The backend trusts Tailscale identity headers only from the loopback Serve proxy and maps the approved login to an internal user ID.
+- Tailscale Serve terminates private HTTPS at the web origin. Funnel stays disabled.
+- The web same-origin gateway receives the Serve identity, forwards only reviewed request headers, and signs its private request to the API with an internal proxy secret. The API trusts identity only from configured web-proxy IPs with that secret.
 - A separate Tailscale HTTPS listener may expose the Garage S3 data API for signed browser upload/download. Its admin, metrics, and RPC endpoints remain private.
 - PostgreSQL, Temporal gRPC/UI, worker ports, llama.cpp, the VieNeu-TTS runtime, Garage administration, Prometheus, Grafana, Jaeger, and the container runtime socket are not generally exposed.
 - Operational UIs are accessed on loopback, through Tailscale SSH, or through a temporary operator-only Serve rule.
@@ -98,4 +98,6 @@ Do not place development and production data or secrets in the same database, bu
 
 ## Current implementation boundary
 
-Phase 1 includes a development-only Compose topology for PostgreSQL, Temporal, Garage, and the three non-root application composition roots. It uses committed local-only credentials, loopback port publication, named volumes, and no paid provider. It is not the production deployment: launch agents, Tailscale Serve rules, real secret files, backups, production observability, egress restrictions, and migration execution remain gated by later roadmap phases.
+Phase 2 includes a development-only Compose topology for PostgreSQL, Temporal, Garage, one-shot Alembic migration and Garage CORS initialization, and the three non-root application composition roots. API, web, Temporal gRPC, and Garage data ports publish to loopback only; the worker has no inbound application port. The local profile uses committed local-only credentials and development identity, named volumes, provisional limits, and no paid provider.
+
+This is not the production deployment: host Tailscale Serve rules, real secret files/credentials, staging sweepers, deletion, backups, production telemetry, egress restrictions, read-only roots/resource limits, and release automation remain gated. Migrations are already separate from application startup and are verified through upgrade/downgrade/drift tests.

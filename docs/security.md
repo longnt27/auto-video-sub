@@ -10,7 +10,8 @@ Primary threats are cross-tenant access, signed URL abuse, resource-exhaustion u
 
 - Expose the application only through Tailscale Serve with HTTPS enabled and Funnel disabled. Tailnet grants/ACLs restrict which users can reach the listeners.
 - Use Serve's injected `Tailscale-User-Login` header for the single-owner MVP, compare it to an explicit allowlist, and map it to an opaque internal user ID. Email/login is an external identity mapping, never the project authorization key.
-- Trust identity headers only when the request comes from the loopback Serve proxy. Web/API containers bind to loopback or a private container network, reject direct access, and discard client-supplied identity headers.
+- Route browser JSON through the web application's same-origin gateway. It copies only an allowlisted set of headers, translates the Tailscale login to an internal header, and authenticates its private hop with a distinct shared proxy secret.
+- The API trusts that identity only when both the source IP belongs to an allowlisted web-proxy IP/CIDR and the proxy secret matches. It refuses to start tailnet authentication with an empty allowlist, empty proxy range, or default/short secret. API and web containers otherwise bind to loopback/private networks; the browser cannot select an internal owner ID.
 - Require project ownership in every project, revision, workflow, review, artifact, and signed URL query. Never authorize from an object key supplied by a client.
 - Use opaque IDs and deny by default. If multiple users or conventional sessions are needed, adopt Tailscale `tsidp` OIDC or another reviewed identity provider rather than extending header logic ad hoc.
 - Protect state-changing endpoints with same-site cookies/CSRF defenses where browser sessions are introduced.
@@ -38,7 +39,7 @@ Separate media worker credentials from API and AI worker credentials. Media work
 
 Enforce upload byte size, media duration, dimensions, frame rate, streams, project count, concurrent workflows, daily/monthly processing units, provider spend, and signed-URL creation rate. Reserve quota before admission and reconcile actual cost. Apply per-user/API rate limits and global backpressure; return actionable retry information without exposing internal capacity.
 
-Initial numerical limits remain an open product decision and must be based on load/media tests.
+Phase 2 uses configurable provisional ceilings of 2 GiB per upload, three hours, 3840×2160, 60 fps, and 16 streams, plus ten projects, one active upload, and 4 GiB stored bytes per user in local Compose. These are conservative development admission limits, not production capacity claims; production promotion still requires benchmark and policy approval.
 
 ## Secrets and credentials
 
@@ -58,12 +59,14 @@ The MVP uses only a reviewed built-in VieNeu-TTS preset voice. Voice cloning, us
 
 ## Supply chain and containers
 
-Pin direct tool/runtime versions and lock transitive dependencies. Phase 1 runs deterministic formatting, lint, type, and test checks plus monthly dependency update proposals; dependency, secret, license, static-analysis, and container vulnerability scanning must be added before the pilot. Generate an SBOM for release images, sign images/artifacts where supported, use reviewed base images, and rebuild for security patches. Run containers as non-root and support amd64/arm64 where dependencies permit; document exceptions.
+Pin direct tool/runtime versions and lock transitive dependencies. Current CI runs deterministic formatting, lint, type, unit/media, PostgreSQL/Garage integration, migration, and web-build checks plus monthly dependency update proposals; secret, license, static-analysis, and container vulnerability scanning must be added before the pilot. Generate an SBOM for release images, sign images/artifacts where supported, use reviewed base images, and rebuild for security patches. Run containers as non-root and support amd64/arm64 where dependencies permit; document exceptions.
 
 ## Retention, deletion, and incident handling
 
 Assign retention classes to originals, intermediates, provider envelopes, logs, and final outputs. Project deletion immediately revokes API/download access, records a tombstone, cancels work, then purges objects and metadata through an auditable workflow subject to legal/backup policy. Lifecycle rules are a safety net, not the only deletion mechanism.
 
 Temporary files and abandoned multipart uploads have sweepers and maximum age. Logs use bounded retention and redaction. Security reports follow [SECURITY.md](../SECURITY.md); suspected cross-tenant access or credential leakage requires incident escalation and credential/URL revocation.
+
+Phase 2 expires stale pending intents and releases their database quota reservation when the owner next requests an upload. A scheduled staging-object sweeper and user-facing deletion workflow are still required before production; until then, abandoned staging bytes may remain in Garage even though they are never authorized as artifacts.
 
 Encrypted backups must leave the physical deployment host. Protect backup credentials separately, test restoration, and document that deletion from the live project may persist in backups until the declared expiry window.

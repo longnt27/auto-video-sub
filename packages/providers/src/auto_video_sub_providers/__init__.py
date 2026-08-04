@@ -1,6 +1,7 @@
-"""External provider adapters.
+"""External provider adapters."""
 
-Adapters are added only after their ports and provider choices are approved for the active phase.
-"""
+from auto_video_sub_application.ports import MediaProcessError
 
-__all__: list[str] = []
+from auto_video_sub_providers.media import FFmpegMediaProcessor
+
+__all__ = ["FFmpegMediaProcessor", "MediaProcessError"]

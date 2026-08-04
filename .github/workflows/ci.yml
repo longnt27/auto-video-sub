@@ -35,6 +35,8 @@ jobs:
         run: uv run mypy
       - name: Tests
         run: uv run pytest --cov --cov-report=term-missing
+      - name: PostgreSQL, Garage, and migration integration tests
+        run: make test-integration
 
   web:
     name: Web quality

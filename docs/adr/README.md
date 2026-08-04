@@ -22,6 +22,7 @@ The initial architecture was approved for implementation by the owner on 2026-08
 | [0010](0010-local-vietnamese-tts.md) | VieNeu-TTS for local Vietnamese synthesis | Accepted |
 | [0011](0011-versioned-translation-tone-presets.md) | Versioned project-wide translation tone presets | Accepted |
 | [0012](0012-structured-subtitle-styles.md) | Structured subtitle styles with pinned fonts | Accepted |
+| [0013](0013-same-origin-tailnet-identity-gateway.md) | Same-origin web gateway for tailnet identity | Accepted |
 
 ## Template
 

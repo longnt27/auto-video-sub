@@ -31,6 +31,8 @@ erDiagram
 
 ## Aggregates and records
 
+Phase 2 persists `users`, `quota_accounts`, `projects`, `media_assets`, `upload_intents`, `artifacts`, `artifact_edges`, and `stage_executions`. Later records below remain approved contracts for their roadmap phases, not empty tables created in advance.
+
 ### Project
 
 Owns user authorization scope, title, lifecycle, processing settings, current approved transcript/context/translation-policy/subtitle-style pointers, quota reservations, and deletion state. Project lifecycle is coarse: `draft`, `active`, `completed`, `deletion_pending`, `deleted`. Processing and review state are projections, not an ever-growing project status enum.
@@ -38,6 +40,8 @@ Owns user authorization scope, title, lifecycle, processing settings, current ap
 ### MediaAsset
 
 References the original artifact and verified probe metadata: container, codecs, duration, frame dimensions, streams, rotation, time bases, and safety validation. A project can have replacement input versions, but each workflow pins exactly one.
+
+The Phase 2 status projection is `upload_pending`, `object_received`, `validating`, `proxy_generating`, `ready`, `rejected`, or `failed`. A proxy artifact ID may be reserved before publication for deterministic object naming, but download authorization requires both `ready` and an available artifact row.
 
 ### SubtitleSegment
 
@@ -74,6 +78,8 @@ Belongs to one segment and translation revision. Stores attempt number, text rev
 Stores kind, media type, byte size, checksum, object key, storage provider, creation time, producer stage execution, schema/format version, retention class, encryption metadata, and availability state. `ArtifactEdge` records typed lineage (`derived_from`, `contains`, `rendered_with`). Object keys are opaque and never used for authorization.
 
 Retention classes distinguish `source`, `editorial`, `derived_reusable`, `ephemeral_evidence`, `final_output`, and `audit_envelope`. Exact periods are policy decisions, but the class is immutable metadata. A legal hold or deletion tombstone is modeled separately from normal lifecycle expiry.
+
+Phase 2 uses `source` for the sealed original and `derived_reusable` for the proxy. Publication inserts the artifact before its lineage edge in one database transaction; storage bytes are reconciled against the owner's locked quota account. Staging keys are never artifacts.
 
 ### WorkflowRun and StageExecution
 

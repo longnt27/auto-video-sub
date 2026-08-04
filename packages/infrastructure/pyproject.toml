@@ -5,6 +5,7 @@ description = "Persistence, workflow, storage, settings, and telemetry adapters"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "auto-video-sub-application",
+  "alembic>=1.16,<2",
   "asyncpg>=0.31,<0.32",
   "boto3>=1.42,<2",
   "pydantic-settings>=2.12,<3",

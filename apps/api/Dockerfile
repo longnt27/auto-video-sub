@@ -17,6 +17,7 @@ COPY apps/api/src apps/api/src
 COPY packages/domain/src packages/domain/src
 COPY packages/application/src packages/application/src
 COPY packages/infrastructure/src packages/infrastructure/src
+COPY db db
 RUN uv sync --frozen --no-dev --package auto-video-sub-api
 
 FROM python:3.12.13-slim-bookworm AS runtime
@@ -28,6 +29,7 @@ COPY --from=builder /app/apps/api/src apps/api/src
 COPY --from=builder /app/packages/domain/src packages/domain/src
 COPY --from=builder /app/packages/application/src packages/application/src
 COPY --from=builder /app/packages/infrastructure/src packages/infrastructure/src
+COPY --from=builder /app/db db
 USER 10001:10001
 EXPOSE 8000
 ENTRYPOINT ["auto-video-sub-api"]

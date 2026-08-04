@@ -10,7 +10,27 @@ Represent processing as a durable DAG of stage scopes rather than one giant stat
 
 The API exposes a projection with current phase, percent/range, active review gates, failed scopes, and next actions. It never infers correctness from a single project status.
 
-Upload ingress has its own state: `pending`, `uploading` (client-observed progress), `object_received`, `validating`, `accepted`, `rejected`, `expired`, or `aborted`. Only server verification can move an object from `object_received` to `accepted`; workflow processing starts from an accepted media asset.
+Upload ingress has its own state: `pending`, `uploading` (client-observed progress), `object_received`, `validating`, `accepted`, `rejected`, `expired`, or `aborted`. Only server media verification can move an object from `object_received` to `accepted`; processing may start from `object_received`, but downstream product stages can consume only accepted media.
+
+In Phase 2, upload intent state and media-processing status are separate: completion seals a matching object and records `object_received`; `media-ingest-v1` validates it before changing the upload intent to `accepted` and publishing the original artifact. Proxy generation then moves the media asset to `ready`. This avoids treating storage metadata alone as media acceptance.
+
+## Implemented Phase 2 workflow
+
+```mermaid
+flowchart LR
+  C[Complete upload] --> S[Seal immutable original key]
+  S --> W[media-ingest-v1]
+  W --> V[validate-original-media-v1]
+  V -->|valid| A[Register original and reconcile reservation]
+  A --> P[generate-proxy-media-v1]
+  P --> R[Publish proxy and lineage]
+  R --> Ready[Media ready]
+  V -->|permanent invalid| Reject[Delete sealed object and reject]
+  V -->|transient exhausted| Fail[Media failed]
+  P -->|bounded attempts exhausted| Fail
+```
+
+Workflow ID is `media-ingest-v1/{media_asset_id}` with duplicate-start rejection. Validation uses at most three attempts; proxy generation uses at most two. Activity timeouts are 30 minutes and three hours respectively, with heartbeats during long encoding. Stage attempts persist their input fingerprint, worker, start/completion time, error code, and retryability. Successful compatible artifacts short-circuit retried activities.
 
 ## Stage graph
 

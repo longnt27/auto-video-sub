@@ -7,12 +7,27 @@ x-python-environment: &python-environment
   TEMPORAL_ADDRESS: temporal:7233
   TEMPORAL_NAMESPACE: default
   TEMPORAL_TASK_QUEUE: auto-video-sub-workflow
+  TEMPORAL_MEDIA_TASK_QUEUE: auto-video-sub-media
   OBJECT_STORE_ENDPOINT: http://garage:3900
   OBJECT_STORE_BUCKET: auto-video-sub-local
   OBJECT_STORE_REGION: garage
   OBJECT_STORE_ACCESS_KEY: "GK00000000000000000000000000000000"
   OBJECT_STORE_SECRET_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+  PUBLIC_OBJECT_STORE_BASE_URL: http://127.0.0.1:3900
   DEPENDENCY_TIMEOUT_SECONDS: "3"
+  TAILSCALE_AUTH_ENABLED: "0"
+  DEV_AUTH_LOGIN: owner@example.com
+  INTERNAL_PROXY_SECRET: local-development-proxy-secret
+  CORS_ALLOWED_ORIGINS_CSV: http://127.0.0.1:3100,http://localhost:3100
+  MAX_UPLOAD_BYTES: "2147483648"
+  MAX_MEDIA_DURATION_SECONDS: "10800"
+  MAX_MEDIA_WIDTH: "3840"
+  MAX_MEDIA_HEIGHT: "2160"
+  MAX_MEDIA_FRAME_RATE: "60"
+  MAX_MEDIA_STREAMS: "16"
+  DEFAULT_MAX_PROJECTS: "10"
+  DEFAULT_MAX_CONCURRENT_UPLOADS: "1"
+  DEFAULT_MAX_STORAGE_BYTES: "4294967296"
 
 services:
   postgres:
@@ -77,6 +92,33 @@ services:
     networks: [backend]
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    entrypoint: ["alembic"]
+    command: ["-c", "db/alembic.ini", "upgrade", "head"]
+    environment:
+      <<: *python-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    restart: "no"
+
+  object-store-init:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    entrypoint: ["python", "-m", "auto_video_sub_infrastructure.storage_init"]
+    environment:
+      <<: *python-environment
+    depends_on:
+      garage:
+        condition: service_healthy
+    networks: [backend]
+    restart: "no"
+
   api:
     build:
       context: ..
@@ -86,6 +128,10 @@ services:
       SERVICE_NAME: auto-video-sub-api
       PORT: "8000"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
+      object-store-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       temporal:
@@ -136,6 +182,8 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: 0.0.0.0
+      API_INTERNAL_BASE_URL: http://api:8000
+      INTERNAL_PROXY_SECRET: local-development-proxy-secret
     depends_on:
       api:
         condition: service_healthy

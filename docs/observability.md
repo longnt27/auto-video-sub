@@ -48,3 +48,9 @@ Each actionable alert needs a runbook owner, severity, diagnostic queries, safe 
 Keep errors and slow traces at higher sampling rates; sample routine successful spans. Configure retention by environment and data sensitivity. Redaction is tested.
 
 The local deployment uses an OpenTelemetry Collector, Prometheus, Grafana, and Jaeger with persistent but bounded retention. Structured application/container logs initially use size- and time-rotated host files; add Loki only if cross-process log search proves worth its memory and disk cost. Dashboards are loopback-only by default and may be exposed temporarily through an operator-only Tailscale Serve listener. No paid telemetry backend is required.
+
+## Phase 2 implementation boundary
+
+Phase 2 emits structured JSON API/worker logs with request, opaque user, service, dependency, and task-queue context. It persists stage attempts and immutable artifact lineage in PostgreSQL, including workflow ID, attempt, input fingerprint, worker, timestamps, error code, and retryability. Health/readiness covers PostgreSQL, Temporal, and Garage; Temporal itself retains activity attempt history.
+
+OpenTelemetry exporters, metrics backends, dashboards, alert rules, cost ledger fields, and workflow progress projections remain later-phase work. Container logs and Temporal CLI history are sufficient for development diagnosis but are not the production observability target.

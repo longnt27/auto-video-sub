@@ -25,9 +25,11 @@ The approved design is a modular monorepo and modular monolith with independentl
 
 ## Current status
 
-Architecture accepted; Phase 1 reproducible-skeleton implementation is complete and awaiting owner review before Phase 2 begins. See [AGENTS.md](AGENTS.md) for repository rules and [docs/development-workflow.md](docs/development-workflow.md) for change safety.
+Phase 2 implementation is complete on its review branch. It adds tenant-scoped projects, quota-reserved direct uploads, PostgreSQL metadata and Alembic migration, immutable original/proxy artifacts with lineage, a durable Temporal media-ingest workflow, FFprobe safety validation, FFmpeg proxy generation, signed preview URLs, and the browser project/upload/playback flow. Phase 3 remains blocked until the owner accepts the Phase 2 evidence.
 
-## Phase 1 quick start
+See [the Phase 2 API contract](docs/api-phase2.md), [AGENTS.md](AGENTS.md), and [the development workflow](docs/development-workflow.md).
+
+## Local quick start
 
 Required host tools are Node.js `22.22.x`, pnpm `11.15.x` through Corepack, Python `3.12.13`, uv `0.11.3`, Docker with Compose, and at least 6 GiB of free disk space for the local stack.
 
@@ -38,8 +40,11 @@ make check
 make stack-config
 make stack-up
 make stack-smoke
+make stack-smoke-phase2
 ```
 
-The web and API are then available only on loopback at `http://127.0.0.1:3100` and `http://127.0.0.1:8000`. `make stack-down` stops the containers without deleting persistent volumes. No command above calls the paid translation provider; provider smoke tests remain opt-in and are not implemented in Phase 1.
+The web and API are available only on loopback at `http://127.0.0.1:3100` and `http://127.0.0.1:8000`. `make stack-smoke-phase2` generates a one-second synthetic video and exercises project creation, direct object upload, validation, proxy generation, and signed playback. `make stack-down` stops containers without deleting persistent volumes. No command above calls the paid translation provider.
 
 Run one process without containers with `make web`, `make api`, or `make worker` after starting the local dependencies. Discover the authoritative commands in the root `Makefile`, workspace manifests, and CI workflow.
+
+Use `make test-integration` for clean PostgreSQL/Garage contract tests and a migration upgrade/downgrade/upgrade cycle. The provisional local admission policy is 2 GiB, three hours, 3840×2160, 60 fps, and 16 streams; these are configurable safety ceilings, not a production capacity promise.

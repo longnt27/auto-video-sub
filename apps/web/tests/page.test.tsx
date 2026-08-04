@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import Home from "../app/page";
 
-describe("foundation page", () => {
-  it("describes the local-first cost boundary", () => {
+describe("phase 2 project workspace", () => {
+  it("renders the project, upload, and proxy-review flow", () => {
     const html = renderToStaticMarkup(<Home />);
 
     expect(html).toContain("Auto Video Sub");
-    expect(html).toContain("Translation is the only paid runtime provider");
-    expect(html).toContain("Product workflows begin only after this foundation passes review");
+    expect(html).toContain("translation is the only paid provider");
+    expect(html).toContain("Choose a Chinese-language video");
+    expect(html).toContain("Proxy preview");
   });
 });

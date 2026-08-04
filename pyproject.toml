@@ -38,6 +38,10 @@ auto-video-sub-providers = { workspace = true }
 addopts = "--strict-config --strict-markers"
 asyncio_mode = "auto"
 testpaths = ["apps", "packages", "tests"]
+markers = [
+  "integration: requires an ephemeral PostgreSQL service",
+  "media: requires the pinned FFmpeg/ffprobe toolchain",
+]
 
 [tool.coverage.run]
 branch = true
@@ -79,5 +83,5 @@ packages = [
 ]
 
 [[tool.mypy.overrides]]
-module = ["boto3"]
+module = ["boto3", "botocore.*"]
 ignore_missing_imports = true

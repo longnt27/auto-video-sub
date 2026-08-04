@@ -2,7 +2,7 @@
 
 ## Current implementation phase
 
-The owner approved the initial architecture on 2026-08-04. Phase 1 implementation is complete and awaiting its owner review gate. Do not implement Phase 2 product behavior until that exit evidence is accepted. Later unresolved choices in `docs/open-decisions.md` gate their affected phase rather than the skeleton.
+The owner approved Phase 2 on 2026-08-04. Its implementation is complete and awaiting review. Do not implement Phase 3 transcript/OCR behavior until the Phase 2 exit evidence is accepted. Later unresolved choices in `docs/open-decisions.md` gate their affected phase.
 
 ## Future change workflow
 
@@ -44,10 +44,15 @@ make check
 make stack-config
 make stack-up
 make stack-smoke
+make stack-smoke-phase2
 ```
 
-`make format`, `make format-check`, `make lint`, `make typecheck`, `make test`, and `make build` are the supported quality commands. `make stack-smoke` verifies both HTTP endpoints after startup. `make web`, `make api`, and `make worker` run individual composition roots. `make stack-down` stops the local stack without deleting volumes. The disk preflight requires 6 GiB free before a stack start; model assets in later phases will require a separately measured and substantially larger allowance.
+`make format`, `make format-check`, `make lint`, `make typecheck`, `make test`, and `make build` are the supported quality commands. `make test-integration` starts isolated PostgreSQL and Garage instances, cycles the migration down/up, checks model drift, and runs repository/storage contracts. `make stack-smoke` verifies health; `make stack-smoke-phase2` exercises the full project/upload/proxy path with a generated fixture. `make web`, `make api`, and `make worker` run individual composition roots. `make stack-down` stops the local stack without deleting volumes. The disk preflight requires 6 GiB free; later model assets need a separately measured allowance.
+
+Migration generation and application are deliberate operations. Generate revisions only after model review, inspect them fully, run `make test-integration`, and deploy them through the one-shot migration task; the API never migrates on startup.
 
 The Python environment uses `.cache/uv` by default through the `Makefile`; CI uses the runner cache. pnpm permits lifecycle scripts only for the explicitly reviewed `sharp` package. Adding another build script requires source and purpose review plus an explicit `allowBuilds` entry.
+
+The worker image pins the Debian FFmpeg package version as a build argument in its Dockerfile. Updating it is a media-runtime change: review security fixes and codec behavior, rebuild both architectures where supported, and rerun media plus full-stack smoke tests.
 
 All default checks are deterministic and local. `RUN_TRANSLATION_LLM_SMOKE` stays `0`; no ordinary setup, test, build, or CI command may invoke the paid provider.

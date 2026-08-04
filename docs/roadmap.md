@@ -6,23 +6,25 @@ Each phase ends with a review gate. Scope may be reduced after evaluation; later
 
 The owner approved the documented architecture and directed implementation. All initial ADRs are accepted; unresolved numerical/provider/catalog choices remain explicit gates for their affected phases.
 
-## Phase 1 — reproducible skeleton (implementation complete 2026-08-04)
+## Phase 1 — reproducible skeleton (accepted 2026-08-04)
 
 Initialize Git if approved; add pinned tool versions, workspace/package manifests, lockfiles, task runner, minimal web/API/worker composition roots, local Compose dependencies, lint/type/test harnesses, non-root Dockerfiles, cost-free CI/local checks, and development documentation. Include no product workflow beyond health/readiness and local dependency connectivity.
 
-**Current review gate.** The arm64 quality suite, production web build, non-root image builds, Compose validation, clean-volume startup, and live health/readiness smoke checks passed. The owner must accept this evidence before Phase 2 starts.
-
 Exit: a clean checkout can run documented checks on arm64; the local stack can start without paid services; CI validates both language stacks; no paid translation call occurs.
 
-## Phase 2 — project, identity, upload, and artifacts
+## Phase 2 — project, identity, upload, and artifacts (implementation complete 2026-08-04)
 
 Implement Tailscale Serve identity validation, tenant-safe projects, quota-aware tailnet-only signed upload intents, media safety validation/probing, immutable artifacts/lineage, proxy generation, and browser proxy playback.
 
+The implementation uses a narrow durable `media-ingest-v1` Temporal workflow now because validation and proxy encoding are restart-sensitive long-running work. Phase 3 extends the workflow DAG rather than replacing an in-process Phase 2 queue.
+
+**Current review gate.** Unit/API/media tests, PostgreSQL/Garage integration tests, migration upgrade/downgrade/drift checks, non-root container health, and the complete signed-upload-to-proxy smoke have passed locally on Apple Silicon. The owner must accept the implementation, provisional input limits, and same-origin identity-gateway decision before Phase 3 begins.
+
 Exit: authorized user can safely upload a fixture and preview a proxy; cross-tenant/security tests pass.
 
-## Phase 3 — durable workflow and transcript
+## Phase 3 — workflow expansion and transcript
 
-Implement Temporal orchestration, stage history/progress/cancellation, region extraction, OCR adapter, consolidation, stable subtitle IDs, transcript revisions, and review UI.
+Extend Temporal orchestration with project-level progress/cancellation/restart commands, region extraction, OCR adapter, consolidation, stable subtitle IDs, transcript revisions, and review UI.
 
 Exit: worker restart/retry/cancel tests pass and a transcript can be corrected without global reprocessing.
 
