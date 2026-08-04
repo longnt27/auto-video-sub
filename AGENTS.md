@@ -28,7 +28,7 @@ Before technical work, read `README.md`, `docs/product-overview.md`, `docs/archi
 
 ## Work safety
 
-- Do not perform feature work directly on the default branch. Use a task branch or an isolated worktree after confirming the current branch and worktree state.
+- Do not perform feature work directly on the default branch. Use one `dev/<feature-name>` branch per coherent feature, or an isolated worktree on such a branch, after confirming the current branch and worktree state.
 - Never use destructive Git commands, overwrite unrelated changes, or discard work that you did not create.
 - Do not add or upgrade dependencies without a documented need, alternatives considered, and compatibility/security checks.
 - Do not refactor unrelated code while completing a scoped change.
@@ -38,6 +38,6 @@ Before technical work, read `README.md`, `docs/product-overview.md`, `docs/archi
 
 ## Change discipline
 
-Plan non-trivial work. Keep commits and diffs reviewable. Update architecture, domain, API, operational, and decision documents when their contracts change. New significant decisions require an ADR using `docs/adr/README.md`.
+Plan non-trivial work. A branch represents one feature; split that feature into small, logically complete commits rather than one branch-sized commit. Keep commits and diffs reviewable. Update architecture, domain, API, operational, and decision documents when their contracts change. New significant decisions require an ADR using `docs/adr/README.md`.
 
 A completion report must summarize behavior, files, tests with exact results, migrations or rollout implications, risks, follow-ups, and items requiring human review. Read `docs/subtitle-styling.md` before changing editor overlay or final subtitle rendering behavior.

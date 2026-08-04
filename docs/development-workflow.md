@@ -8,7 +8,7 @@ The owner approved Phase 2 on 2026-08-04. Its implementation is complete and awa
 
 1. Inspect repository status, current branch/worktrees, governing `AGENTS.md`, relevant docs/ADRs, and actual manifests/task runner.
 2. Confirm requirements, acceptance criteria, security/operational impact, and whether an ADR or migration is required.
-3. Create a task branch or isolated worktree; do not implement features on the default branch.
+3. Create one `dev/<feature-name>` branch for the coherent feature, optionally in an isolated worktree; do not implement features on the default branch.
 4. Write a concise plan with tests and rollout/rollback implications.
 5. Implement the smallest coherent change through the defined module boundaries.
 6. Run repository-defined formatting, lint, type, unit, integration, and task-specific checks. Never invent commands; discover them from checked-in files.
@@ -17,7 +17,7 @@ The owner approved Phase 2 on 2026-08-04. Its implementation is complete and awa
 
 ## Branch and worktree safety
 
-The default branch is protected. Never force-push it or do direct feature work there. Do not use `git reset --hard`, destructive clean/checkout operations, or delete branches/worktrees without explicit approval and verified targets. Treat pre-existing changes as belonging to someone else. Stop and ask if they overlap the intended edit and cannot be preserved.
+The default branch is protected. Never force-push it or do direct feature work there. Branches use `dev/<feature-name>` and represent one feature. Build that feature through small, logically complete commits so review can follow the evolution and individual parts can be reverted safely. Do not create a new branch merely to hold one oversized commit. Do not use `git reset --hard`, destructive clean/checkout operations, or delete branches/worktrees without explicit approval and verified targets. Treat pre-existing changes as belonging to someone else. Stop and ask if they overlap the intended edit and cannot be preserved.
 
 ## Decision and dependency discipline
 
@@ -56,3 +56,5 @@ The Python environment uses `.cache/uv` by default through the `Makefile`; CI us
 The worker image pins the Debian FFmpeg package version as a build argument in its Dockerfile. Updating it is a media-runtime change: review security fixes and codec behavior, rebuild both architectures where supported, and rerun media plus full-stack smoke tests.
 
 All default checks are deterministic and local. `RUN_TRANSLATION_LLM_SMOKE` stays `0`; no ordinary setup, test, build, or CI command may invoke the paid provider.
+
+GitHub Actions repeats these gates for pull requests and protected `main`. Successful main builds publish full-SHA and movable `main` image tags to public GHCR; only the full-SHA tag or resolved digest is eligible for deployment. Read [the CI/CD operating contract](github-cicd.md) before changing workflow permissions, release tags, runner type, registry, or deployment behavior.
