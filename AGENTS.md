@@ -38,6 +38,6 @@ Before technical work, read `README.md`, `docs/product-overview.md`, `docs/archi
 
 ## Change discipline
 
-Plan non-trivial work. A branch represents one feature; split that feature into small, logically complete commits rather than one branch-sized commit. Keep commits and diffs reviewable. Update architecture, domain, API, operational, and decision documents when their contracts change. New significant decisions require an ADR using `docs/adr/README.md`.
+Plan non-trivial work. A branch represents one feature; split that feature into small, logically complete commits rather than one branch-sized commit. Keep commits and diffs reviewable. Every commit subject must use `<type>(<scope>): <message>`, with an allowed type from `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, or `revert`; a lowercase kebab-case scope; and a concise imperative message that starts lowercase and has no trailing period. Record breaking-change details in the commit body or a `BREAKING CHANGE:` footer without changing the required subject shape. Update architecture, domain, API, operational, and decision documents when their contracts change. New significant decisions require an ADR using `docs/adr/README.md`.
 
 A completion report must summarize behavior, files, tests with exact results, migrations or rollout implications, risks, follow-ups, and items requiring human review. Read `docs/subtitle-styling.md` before changing editor overlay or final subtitle rendering behavior.
