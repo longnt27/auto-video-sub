@@ -55,7 +55,7 @@ Migration generation and application are deliberate operations. Generate revisio
 
 The Python environment uses `.cache/uv` by default through the `Makefile`; CI uses the runner cache. pnpm permits lifecycle scripts only for the explicitly reviewed `sharp` package. Adding another build script requires source and purpose review plus an explicit `allowBuilds` entry.
 
-The worker image pins the Debian FFmpeg package version as a build argument in its Dockerfile. Updating it is a media-runtime change: review security fixes and codec behavior, rebuild both architectures where supported, and rerun media plus full-stack smoke tests.
+The worker image pins the Debian FFmpeg package version as a build argument in its Dockerfile. The Python CI job separately pins its Ubuntu runner and FFmpeg test package because hosted-runner tools are not an implicit contract. Updating either pin is a media-runtime change: review security fixes and codec behavior, rebuild both architectures where supported, and rerun media plus full-stack smoke tests.
 
 All default checks are deterministic and local. `RUN_TRANSLATION_LLM_SMOKE` stays `0`; no ordinary setup, test, build, or CI command may invoke the paid provider.
 
