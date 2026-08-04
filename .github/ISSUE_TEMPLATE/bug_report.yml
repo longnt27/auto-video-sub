@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a reproducible product or engineering defect
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include customer media, credentials, tokens, or signed URLs. Report security issues privately according to SECURITY.md.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Observed and expected outcome
+      description: Explain what happened and what should have happened.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give minimal steps using synthetic or approved data.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Safe diagnostic context
+      description: Include environment, release, correlation IDs, stage, attempt, and structured error code when available.
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Affected area
+      options:
+        - Web editor
+        - API or authorization
+        - Workflow or queue
+        - OCR or transcript
+        - Translation or context
+        - TTS or duration fitting
+        - Media or rendering
+        - Storage or artifacts
+        - Observability or deployment
+        - Unknown
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private URLs, and unapproved customer content.
+          required: true

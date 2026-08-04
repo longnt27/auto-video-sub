@@ -1,0 +1,4 @@
+interface:
+  display_name: "Provider Adapter Implementation"
+  short_description: "Build replaceable external provider adapters"
+  default_prompt: "Use $implement-provider-adapter to implement and contract-test this provider integration."

@@ -1,0 +1,17 @@
+.git
+.github
+.agents
+.cache
+.data
+.venv
+**/__pycache__
+**/.mypy_cache
+**/.next
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+coverage
+docs
+tests
+tmp
+*.log

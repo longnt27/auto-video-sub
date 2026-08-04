@@ -1,0 +1,17 @@
+[project]
+name = "auto-video-sub-infrastructure"
+version = "0.1.0"
+description = "Persistence, workflow, storage, settings, and telemetry adapters"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "auto-video-sub-application",
+  "asyncpg>=0.31,<0.32",
+  "boto3>=1.42,<2",
+  "pydantic-settings>=2.12,<3",
+  "sqlalchemy[asyncio]>=2.0.51,<2.1",
+  "temporalio>=1.31,<2",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

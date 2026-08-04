@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a scoped capability or change
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and user outcome
+      description: Describe the need without prescribing an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      description: State observable success and important edge cases.
+    validations:
+      required: true
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Out of scope
+      description: Identify behavior this request should not add.
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and risks
+      description: Note security, privacy, cost, provider, migration, workflow, compatibility, or operational constraints.
+  - type: checkboxes
+    id: review
+    attributes:
+      label: Review needs
+      options:
+        - label: This may change a significant architectural decision and should be assessed for an ADR.
+        - label: This needs Chinese/Vietnamese language-quality review.

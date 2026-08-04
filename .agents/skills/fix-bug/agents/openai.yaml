@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Fixing"
+  short_description: "Diagnose and fix defects with regression tests"
+  default_prompt: "Use $fix-bug to diagnose and fix this defect safely."

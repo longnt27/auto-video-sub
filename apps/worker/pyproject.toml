@@ -1,0 +1,18 @@
+[project]
+name = "auto-video-sub-worker"
+version = "0.1.0"
+description = "Temporal worker composition root for Auto Video Sub"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "auto-video-sub-application",
+  "auto-video-sub-infrastructure",
+  "auto-video-sub-providers",
+  "temporalio>=1.31,<2",
+]
+
+[project.scripts]
+auto-video-sub-worker = "auto_video_sub_worker.main:run"
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

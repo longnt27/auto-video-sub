@@ -1,0 +1,31 @@
+{
+  "name": "@auto-video-sub/web",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "22.22.x"
+  },
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3100",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.8",
+    "@types/node": "22.19.8",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.2",
+    "vitest": "4.1.10"
+  }
+}

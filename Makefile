@@ -1,0 +1,64 @@
+SHELL := /bin/sh
+UV_CACHE_DIR ?= .cache/uv
+COMPOSE_FILE := deploy/compose.yaml
+
+.PHONY: bootstrap lock format format-check lint typecheck test check build \
+	stack-config stack-up stack-smoke stack-down api worker web disk-check
+
+bootstrap:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv sync --all-packages --all-groups --frozen
+	corepack pnpm install --frozen-lockfile
+
+lock:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv lock
+	corepack pnpm install --lockfile-only
+
+format:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run ruff format .
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run ruff check --fix .
+	corepack pnpm format
+
+format-check:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run ruff format --check .
+	corepack pnpm format:check
+
+lint:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run ruff check .
+	corepack pnpm lint
+
+typecheck:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run mypy
+	corepack pnpm typecheck
+
+test:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run pytest --cov --cov-report=term-missing
+	corepack pnpm test
+
+check: format-check lint typecheck test
+
+build:
+	corepack pnpm build
+
+stack-config:
+	docker compose --env-file .env.example -f $(COMPOSE_FILE) config --quiet
+
+disk-check:
+	./scripts/check-disk-space.sh
+
+stack-up: disk-check
+	docker compose --env-file .env.example -f $(COMPOSE_FILE) up -d --wait
+
+stack-smoke:
+	./scripts/smoke-local-stack.sh
+
+stack-down:
+	docker compose --env-file .env.example -f $(COMPOSE_FILE) down
+
+api:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run auto-video-sub-api
+
+worker:
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run auto-video-sub-worker
+
+web:
+	corepack pnpm dev:web

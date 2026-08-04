@@ -1,0 +1,10 @@
+[project]
+name = "auto-video-sub-application"
+version = "0.1.0"
+description = "Use cases and ports for Auto Video Sub"
+requires-python = ">=3.12,<3.13"
+dependencies = ["auto-video-sub-domain"]
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

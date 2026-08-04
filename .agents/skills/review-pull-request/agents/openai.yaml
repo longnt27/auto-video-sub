@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pull Request Review"
+  short_description: "Review pull requests for risk and correctness"
+  default_prompt: "Use $review-pull-request to review this change for defects and risks."

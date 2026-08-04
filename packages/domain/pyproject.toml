@@ -1,0 +1,10 @@
+[project]
+name = "auto-video-sub-domain"
+version = "0.1.0"
+description = "Pure domain rules for Auto Video Sub"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"

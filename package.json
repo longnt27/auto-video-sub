@@ -1,0 +1,18 @@
+{
+  "name": "auto-video-sub",
+  "private": true,
+  "packageManager": "pnpm@11.15.1",
+  "engines": {
+    "node": "22.22.x",
+    "pnpm": "11.15.x"
+  },
+  "scripts": {
+    "build": "corepack pnpm --filter @auto-video-sub/web build",
+    "dev:web": "corepack pnpm --filter @auto-video-sub/web dev",
+    "format": "corepack pnpm --filter @auto-video-sub/web format",
+    "format:check": "corepack pnpm --filter @auto-video-sub/web format:check",
+    "lint": "corepack pnpm --filter @auto-video-sub/web lint",
+    "test": "corepack pnpm --filter @auto-video-sub/web test",
+    "typecheck": "corepack pnpm --filter @auto-video-sub/web typecheck"
+  }
+}

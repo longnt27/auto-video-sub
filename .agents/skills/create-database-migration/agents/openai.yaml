@@ -1,0 +1,4 @@
+interface:
+  display_name: "Database Migration"
+  short_description: "Plan and verify safe database migrations"
+  default_prompt: "Use $create-database-migration to design and verify this schema change."

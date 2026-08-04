@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflow Stage Implementation"
+  short_description: "Build retry-safe durable workflow stages"
+  default_prompt: "Use $implement-workflow-stage to implement this durable processing stage."

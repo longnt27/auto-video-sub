@@ -1,0 +1,4 @@
+interface:
+  display_name: "Production Readiness Review"
+  short_description: "Audit reliability, security, and operations"
+  default_prompt: "Use $review-production-readiness to audit this release before production."

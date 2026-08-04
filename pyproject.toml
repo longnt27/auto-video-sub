@@ -1,0 +1,83 @@
+[project]
+name = "auto-video-sub-workspace"
+version = "0.1.0"
+description = "Development workspace for the Auto Video Sub modular monolith"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<0.29",
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.2,<2",
+  "pytest-cov>=7,<8",
+  "ruff>=0.14,<0.15",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+  "apps/api",
+  "apps/worker",
+  "packages/domain",
+  "packages/application",
+  "packages/infrastructure",
+  "packages/providers",
+]
+
+[tool.uv.sources]
+auto-video-sub-domain = { workspace = true }
+auto-video-sub-application = { workspace = true }
+auto-video-sub-infrastructure = { workspace = true }
+auto-video-sub-providers = { workspace = true }
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["apps", "packages", "tests"]
+
+[tool.coverage.run]
+branch = true
+source = [
+  "auto_video_sub_api",
+  "auto_video_sub_application",
+  "auto_video_sub_domain",
+  "auto_video_sub_infrastructure",
+  "auto_video_sub_providers",
+  "auto_video_sub_worker",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+packages = [
+  "auto_video_sub_api",
+  "auto_video_sub_application",
+  "auto_video_sub_domain",
+  "auto_video_sub_infrastructure",
+  "auto_video_sub_providers",
+  "auto_video_sub_worker",
+]
+
+[[tool.mypy.overrides]]
+module = ["boto3"]
+ignore_missing_imports = true
