@@ -18,8 +18,10 @@ env:
 jobs:
   python:
     name: Python quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
+    env:
+      FFMPEG_PACKAGE_VERSION: "7:6.1.1-3ubuntu5"
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
@@ -34,6 +36,12 @@ jobs:
         run: uv run ruff check .
       - name: Type check
         run: uv run mypy
+      - name: Install pinned media test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends "ffmpeg=${FFMPEG_PACKAGE_VERSION}"
+          ffmpeg -version
+          ffprobe -version
       - name: Tests
         run: uv run pytest --cov --cov-report=term-missing
       - name: PostgreSQL, Garage, and migration integration tests
