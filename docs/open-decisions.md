@@ -31,6 +31,7 @@
 | Versioned tone presets | Gives users predictable creative control without exposing arbitrary system prompts | Easy to add presets; prompt behavior is medium |
 | Structured subtitle styles with pinned fonts | Enables responsive HTML preview and reproducible FFmpeg/libass output | Easy/medium; renderer parity requires tests |
 | Same-origin tailnet identity gateway | Keeps browser JSON same-origin while requiring both trusted proxy IP and secret at the API | Medium |
+| GitHub Actions plus public GHCR delivery | Isolated cost-free CI and immutable multi-architecture images without putting a public-repository runner on the production host | Easy/medium |
 
 ## Decisions requiring human approval
 

@@ -59,7 +59,9 @@ The MVP uses only a reviewed built-in VieNeu-TTS preset voice. Voice cloning, us
 
 ## Supply chain and containers
 
-Pin direct tool/runtime versions and lock transitive dependencies. Current CI runs deterministic formatting, lint, type, unit/media, PostgreSQL/Garage integration, migration, and web-build checks plus monthly dependency update proposals; secret, license, static-analysis, and container vulnerability scanning must be added before the pilot. Generate an SBOM for release images, sign images/artifacts where supported, use reviewed base images, and rebuild for security patches. Run containers as non-root and support amd64/arm64 where dependencies permit; document exceptions.
+Pin direct tool/runtime versions and lock transitive dependencies. Current CI runs deterministic formatting, lint, type, unit/media, PostgreSQL/Garage integration, migration, and web-build checks plus monthly dependency update proposals. Protected-main delivery publishes multi-architecture GHCR images with BuildKit provenance and SBOM attestations. Secret, license, static-analysis, signature verification, and container vulnerability scanning must be added before the pilot. Use reviewed base images, rebuild for security patches, run containers as non-root, and support amd64/arm64 where dependencies permit; document exceptions.
+
+The GitHub repository is public. Never run its pull-request workflows on a persistent runner attached to the production host or tailnet; public workflow code could compromise that machine. Workflow permissions remain read-only except for the main-only image publication job's scoped `packages: write`. Do not use `pull_request_target` to execute repository code with elevated credentials. See [the CI/CD operating contract](github-cicd.md).
 
 ## Retention, deletion, and incident handling
 

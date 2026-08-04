@@ -74,7 +74,9 @@ Secrets are mounted from owner-readable files outside the repository or provided
 
 ## Release and rollback
 
-1. Build versioned arm64 images from one commit; build/test amd64 variants where native dependencies support them.
+GitHub Actions provides the current continuous-delivery boundary described in [ADR-0014](adr/0014-github-actions-and-ghcr-delivery.md): after all protected-main gates pass, it publishes public GHCR API, web, and worker images for `amd64` and `arm64` with immutable full-SHA tags, provenance, and SBOMs. It does not connect to or deploy the local host. The production Mac must not be a persistent self-hosted runner for this public repository.
+
+1. Select exact full-SHA image tags or recorded digests from one commit; never deploy the movable `main` tags.
 2. Run unit, integration, workflow replay, media, API, browser, security, and migration checks without calling the paid LLM.
 3. Back up PostgreSQL and configuration; verify Garage/backup health and available disk.
 4. Apply backward-compatible expand migrations through a single-run migration task. Never migrate automatically during application startup.
@@ -100,4 +102,4 @@ Do not place development and production data or secrets in the same database, bu
 
 Phase 2 includes a development-only Compose topology for PostgreSQL, Temporal, Garage, one-shot Alembic migration and Garage CORS initialization, and the three non-root application composition roots. API, web, Temporal gRPC, and Garage data ports publish to loopback only; the worker has no inbound application port. The local profile uses committed local-only credentials and development identity, named volumes, provisional limits, and no paid provider.
 
-This is not the production deployment: host Tailscale Serve rules, real secret files/credentials, staging sweepers, deletion, backups, production telemetry, egress restrictions, read-only roots/resource limits, and release automation remain gated. Migrations are already separate from application startup and are verified through upgrade/downgrade/drift tests.
+This is not the production deployment: host Tailscale Serve rules, real secret files/credentials, staging sweepers, deletion, backups, production telemetry, egress restrictions, read-only roots/resource limits, production Compose overrides, and deployment automation remain gated. CI and immutable image delivery are implemented; migrations are separate from application startup and verified through upgrade/downgrade/drift tests.

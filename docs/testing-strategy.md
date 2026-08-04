@@ -62,6 +62,8 @@ OCR evaluation records character/line accuracy plus segment boundary quality on 
 
 Fast formatting, lint, type, unit, and contract tests run first. Integration/media tests run in parallel using pinned services. Browser E2E runs on the assembled candidate. Security/dependency/container scans and migration checks gate release. Fail closed on missing required tests; quarantine requires an owner, reason, issue, and expiry.
 
+The implemented Phase 2 CI runs Python quality plus real PostgreSQL/Garage migration contracts, web quality/build, and Compose validation. Only a protected-main push that passes all three job groups may publish application images. Pull requests never receive `packages: write`, never publish images, and never run on the production host.
+
 Coverage is a diagnostic, not the goal. Critical domain policy branches and authorization rules require direct assertions regardless of aggregate coverage.
 
 ## Test command discovery

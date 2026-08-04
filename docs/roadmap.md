@@ -20,6 +20,8 @@ The implementation uses a narrow durable `media-ingest-v1` Temporal workflow now
 
 **Current review gate.** Unit/API/media tests, PostgreSQL/Garage integration tests, migration upgrade/downgrade/drift checks, non-root container health, and the complete signed-upload-to-proxy smoke have passed locally on Apple Silicon. The owner must accept the implementation, provisional input limits, and same-origin identity-gateway decision before Phase 3 begins.
 
+GitHub CI/CD is now part of this gate: pull requests run the cost-free deterministic suite, and protected-main success delivers immutable `amd64`/`arm64` API, web, and worker images to public GHCR. Production-host deployment remains gated separately; the public repository does not use a persistent self-hosted runner.
+
 Exit: authorized user can safely upload a fixture and preview a proxy; cross-tenant/security tests pass.
 
 ## Phase 3 — workflow expansion and transcript

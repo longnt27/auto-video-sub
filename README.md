@@ -29,6 +29,8 @@ Phase 2 implementation is complete on its review branch. It adds tenant-scoped p
 
 See [the Phase 2 API contract](docs/api-phase2.md), [AGENTS.md](AGENTS.md), and [the development workflow](docs/development-workflow.md).
 
+GitHub Actions runs cost-free public-repository CI and publishes reviewed `amd64`/`arm64` application images to GHCR after protected `main` passes. It intentionally does not attach the production Mac as a self-hosted runner or deploy into the tailnet; see [the CI/CD contract](docs/github-cicd.md).
+
 ## Local quick start
 
 Required host tools are Node.js `22.22.x`, pnpm `11.15.x` through Corepack, Python `3.12.13`, uv `0.11.3`, Docker with Compose, and at least 6 GiB of free disk space for the local stack.
