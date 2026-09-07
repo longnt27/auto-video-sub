@@ -43,7 +43,7 @@ def _region_payload(region: SubtitleRegion) -> dict[str, object]:
     }
 
 
-def _region(value: dict[str, object]) -> SubtitleRegion:
+def _region(value: dict[str, float | int]) -> SubtitleRegion:
     return SubtitleRegion(
         x_start_ratio=float(value["x_start_ratio"]),
         x_end_ratio=float(value["x_end_ratio"]),

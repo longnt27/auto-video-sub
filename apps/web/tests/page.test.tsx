@@ -14,6 +14,6 @@ describe("phase 3 source transcript workspace", () => {
     expect(html).toContain("Source transcript");
     expect(html).toContain("Extract transcript");
     expect(html).toContain("Chinese source transcript");
-    expect(html).toContain("Save correction");
+    expect(html).toContain("every correction creates a new immutable revision");
   });
 });

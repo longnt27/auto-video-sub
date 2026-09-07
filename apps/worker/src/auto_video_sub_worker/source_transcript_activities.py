@@ -82,8 +82,8 @@ class SourceTranscriptActivities:
         region = _region(payload)
         state = await self._repository.get_record_internal(media_asset_id)
         if state.status in {TranscriptStatus.WAITING_FOR_REVIEW, TranscriptStatus.APPROVED}:
-            observations = await self._repository.load_ocr_observations(media_asset_id)
-            return {"observation_count": len(observations)}
+            existing_observations = await self._repository.load_ocr_observations(media_asset_id)
+            return {"observation_count": len(existing_observations)}
         if state.status is not TranscriptStatus.PROCESSING:
             raise ApplicationError(
                 "Transcript processing is no longer active",
