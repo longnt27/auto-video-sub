@@ -4,7 +4,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from auto_video_sub_application.ports import OcrProviderError
 from auto_video_sub_providers import RapidOcrProvider
 

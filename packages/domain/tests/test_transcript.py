@@ -1,3 +1,4 @@
+import pytest
 from auto_video_sub_domain import (
     OcrObservation,
     SubtitleRegion,
@@ -5,7 +6,6 @@ from auto_video_sub_domain import (
     consolidate_observations,
     normalize_ocr_text,
 )
-import pytest
 
 
 def observation(time_us: int, text: str, confidence: float = 0.9) -> OcrObservation:

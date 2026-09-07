@@ -83,9 +83,7 @@ class RapidOcrProvider:
             )
 
         confidence = (
-            sum(score for _, score in kept if score is not None) / len(kept)
-            if raw_scores
-            else 1.0
+            sum(score for _, score in kept if score is not None) / len(kept) if raw_scores else 1.0
         )
         if not 0.0 <= confidence <= 1.0:
             raise OcrProviderError(

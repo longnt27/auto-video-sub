@@ -401,12 +401,20 @@ export default function Home() {
               </button>
             )}
             {transcript?.status === "processing" && (
-              <button type="button" disabled={transcriptBusy} onClick={() => void cancelTranscript()}>
+              <button
+                type="button"
+                disabled={transcriptBusy}
+                onClick={() => void cancelTranscript()}
+              >
                 Cancel processing
               </button>
             )}
             {transcript && ["failed", "cancelled"].includes(transcript.status) && (
-              <button type="button" disabled={transcriptBusy} onClick={() => void restartTranscript()}>
+              <button
+                type="button"
+                disabled={transcriptBusy}
+                onClick={() => void restartTranscript()}
+              >
                 Restart transcript
               </button>
             )}

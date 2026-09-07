@@ -101,9 +101,13 @@ class TranscriptService:
     ) -> SubtitleSegment:
         cleaned = text.strip()
         if not cleaned:
-            raise ValidationError("Source subtitle text cannot be empty", code="TRANSCRIPT_TEXT_EMPTY")
+            raise ValidationError(
+                "Source subtitle text cannot be empty", code="TRANSCRIPT_TEXT_EMPTY"
+            )
         if len(cleaned) > 4000:
-            raise ValidationError("Source subtitle text is too long", code="TRANSCRIPT_TEXT_TOO_LONG")
+            raise ValidationError(
+                "Source subtitle text is too long", code="TRANSCRIPT_TEXT_TOO_LONG"
+            )
         if expected_version < 1:
             raise ValidationError("Expected segment version is invalid", code="VERSION_INVALID")
         return await self._repository.edit_segment(

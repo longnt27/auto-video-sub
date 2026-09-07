@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
-
 from auto_video_sub_application import TranscriptService
 from auto_video_sub_application.ports import TranscriptRecord, TranscriptSnapshot
 from auto_video_sub_domain import (

@@ -397,7 +397,9 @@ class SqlAlchemyTranscriptRepository:
                     return
                 raise ConflictError("Transcript processing is no longer active")
             await session.execute(
-                delete(OcrObservationModel).where(OcrObservationModel.media_asset_id == media_asset_id)
+                delete(OcrObservationModel).where(
+                    OcrObservationModel.media_asset_id == media_asset_id
+                )
             )
             now = datetime.now(UTC)
             for observation in observations:

@@ -122,7 +122,9 @@ def consolidate_observations(
     max_gap_samples: int = 2,
 ) -> list[ConsolidatedSegment]:
     if sample_interval_us <= 0 or media_duration_us <= 0:
-        raise ValidationError("Transcript timing configuration is invalid", code="OCR_TIMING_INVALID")
+        raise ValidationError(
+            "Transcript timing configuration is invalid", code="OCR_TIMING_INVALID"
+        )
     if max_gap_samples < 1 or max_gap_samples > 10:
         raise ValidationError("OCR consolidation gap is invalid", code="OCR_GAP_INVALID")
 
@@ -152,7 +154,10 @@ def consolidate_observations(
     max_gap_us = sample_interval_us * max_gap_samples
     for observation in cleaned[1:]:
         previous = current[-1]
-        if observation.text == previous.text and observation.time_us - previous.time_us <= max_gap_us:
+        if (
+            observation.text == previous.text
+            and observation.time_us - previous.time_us <= max_gap_us
+        ):
             current.append(observation)
         else:
             groups.append(current)
