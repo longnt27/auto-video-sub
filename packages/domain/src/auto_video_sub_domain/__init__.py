@@ -25,6 +25,11 @@ from auto_video_sub_domain.media import (
     validate_probe,
 )
 from auto_video_sub_domain.projects import Project, ProjectLifecycle, User, validate_project_title
+from auto_video_sub_domain.subtitle_style import (
+    SubtitleAlignment,
+    SubtitleStyleDraft,
+    SubtitleStyleVersion,
+)
 from auto_video_sub_domain.transcript import (
     ConsolidatedSegment,
     OcrObservation,
@@ -36,6 +41,20 @@ from auto_video_sub_domain.transcript import (
     consolidate_observations,
     normalize_ocr_text,
 )
+from auto_video_sub_domain.translation import (
+    ContextEntity,
+    ContextVersion,
+    TonePreset,
+    TranslationBatchPlan,
+    TranslationFinding,
+    TranslationPolicyVersion,
+    TranslationRevision,
+    TranslationRevisionOrigin,
+    TranslationStatus,
+    contains_han,
+    plan_translation_batches,
+    validate_translation_items,
+)
 
 __all__ = [
     "Artifact",
@@ -45,6 +64,8 @@ __all__ = [
     "AuthorizationError",
     "ConflictError",
     "ConsolidatedSegment",
+    "ContextEntity",
+    "ContextVersion",
     "DomainError",
     "MediaAsset",
     "MediaLimits",
@@ -58,20 +79,33 @@ __all__ = [
     "RetentionClass",
     "SourceRevision",
     "SourceRevisionOrigin",
+    "SubtitleAlignment",
     "SubtitleRegion",
     "SubtitleSegment",
+    "SubtitleStyleDraft",
+    "SubtitleStyleVersion",
+    "TonePreset",
     "TranscriptStatus",
+    "TranslationBatchPlan",
+    "TranslationFinding",
+    "TranslationPolicyVersion",
+    "TranslationRevision",
+    "TranslationRevisionOrigin",
+    "TranslationStatus",
     "UploadIntent",
     "UploadState",
     "User",
     "ValidationError",
     "__version__",
     "consolidate_observations",
+    "contains_han",
     "new_uuid7",
     "normalize_ocr_text",
+    "plan_translation_batches",
     "safe_display_name",
     "validate_probe",
     "validate_project_title",
+    "validate_translation_items",
 ]
 
 __version__ = "0.1.0"

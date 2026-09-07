@@ -55,10 +55,23 @@ class Settings(BaseSettings):
 
     temporal_media_task_queue: str = "auto-video-sub-media"
     temporal_local_ai_task_queue: str = "auto-video-sub-local-ai"
+    temporal_translation_task_queue: str = "auto-video-sub-translation"
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     media_probe_timeout_seconds: int = Field(default=60, ge=5, le=600)
     proxy_timeout_seconds: int = Field(default=7200, ge=60, le=43_200)
+
+    # Paid translation is fail-closed by default. The owner must explicitly configure
+    # a model, key, price snapshot, and non-zero account budget before real calls can run.
+    translation_provider_name: str = "openai"
+    translation_provider_base_url: str = "https://api.openai.com/v1/responses"
+    translation_provider_api_key: str = ""
+    translation_provider_model: str = ""
+    translation_input_cost_micros_per_million_tokens: int = Field(default=0, ge=0)
+    translation_output_cost_micros_per_million_tokens: int = Field(default=0, ge=0)
+    default_translation_budget_micros: int = Field(default=0, ge=0)
+    translation_request_timeout_seconds: int = Field(default=90, ge=10, le=600)
+    worker_profile: str = "core"
 
     @staticmethod
     def _csv(value: str) -> tuple[str, ...]:
@@ -93,6 +106,17 @@ class Settings(BaseSettings):
             "replace-me",
         }:
             raise ValueError("Tailnet authentication requires a distinct 32+ character secret")
+        return self
+
+    @model_validator(mode="after")
+    def validate_worker_profile(self) -> Settings:
+        if self.worker_profile not in {"core", "translation"}:
+            raise ValueError("WORKER_PROFILE must be core or translation")
+        if self.worker_profile == "translation":
+            if not self.translation_provider_model.strip():
+                raise ValueError("Translation worker requires TRANSLATION_PROVIDER_MODEL")
+            if not self.translation_provider_api_key.strip():
+                raise ValueError("Translation worker requires TRANSLATION_PROVIDER_API_KEY")
         return self
 
 

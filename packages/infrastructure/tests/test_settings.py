@@ -19,6 +19,36 @@ def test_tailnet_authentication_rejects_the_committed_development_secret() -> No
         Settings(tailscale_auth_enabled=True, _env_file=None)
 
 
+def test_core_worker_does_not_require_paid_translation_credentials() -> None:
+    settings = Settings(
+        worker_profile="core",
+        translation_provider_model="",
+        translation_provider_api_key="",
+        _env_file=None,
+    )
+
+    assert settings.worker_profile == "core"
+
+
+@pytest.mark.parametrize(
+    ("model", "api_key"),
+    [
+        ("", "secret-key"),
+        ("configured-model", ""),
+    ],
+)
+def test_translation_worker_fails_closed_without_provider_configuration(
+    model: str, api_key: str
+) -> None:
+    with pytest.raises(ValidationError, match="Translation worker requires"):
+        Settings(
+            worker_profile="translation",
+            translation_provider_model=model,
+            translation_provider_api_key=api_key,
+            _env_file=None,
+        )
+
+
 def test_storage_cors_uses_one_rule_per_origin_for_garage_compatibility() -> None:
     rules = _cors_rules(("http://127.0.0.1:3100", "http://localhost:3100"))
 

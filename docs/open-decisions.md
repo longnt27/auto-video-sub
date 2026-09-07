@@ -54,10 +54,10 @@
 12. Legal terms for uploaded media, translation-provider data processing, content deletion, and acceptable-use enforcement.
 13. Objective OCR/translation/TTS quality thresholds and who performs Vietnamese/Chinese review.
 
-### Required before the affected implementation phase
+### Phase 4 approvals — accepted 2026-09-07
 
-14. **Tone catalog:** approve the initial `natural`, `funny`, `formal`, and `dramatic` prompt behavior, Vietnamese evaluation fixtures, default preset, and confirmation copy for paid retranslation. Project-wide tone is the MVP default; per-segment tone and arbitrary prompts remain out of scope.
-15. **Subtitle style policy:** approve the initial font catalog and licenses, default style, numeric control ranges, allowed colors/background/shadow controls, preview/render parity tolerance, and whether left/right alignment is useful enough for MVP. Arbitrary font uploads and raw CSS/ASS remain out of scope.
+14. **Tone catalog — approved:** use the versioned `natural`, `funny`, `formal`, and `dramatic` policies implemented in the application layer. `natural` is the MVP default. Every preset must preserve facts, names, relationships, segment identity, and meaning; `funny` may only amplify humor already supported by the source, while `dramatic` may only increase expression without inventing plot or emotion. Tone is project-wide. Arbitrary prompts and per-segment tone remain post-MVP. Starting or intentionally rerunning paid translation requires estimate display plus explicit confirmation; the accepted UI copy is `I confirm this paid translation scope.`
+15. **Subtitle style policy — approved:** the MVP font catalog contains only `Noto Sans` under `OFL-1.1`. Default style is centered, 5% video-height text, white `#FFFFFF`, black `#000000` outline at 2px, 1px shadow, and transparent black background. Allowed controls are font size 3–8% of video height, `#RRGGBB` text/outline/background colors, 0–90% background opacity, 0–4px outline, and 0–4px shadow. Left/right alignment, arbitrary font uploads, raw CSS, and raw ASS are out of scope. Each save creates an immutable style version and must not call translation or FFmpeg. Phase 6 must consume the same structured style state and prove preview/render parity on golden fixtures: identical text and line count, with subtitle box position/extent differing by no more than 2% of the video dimensions.
 
 ## Reversible experiments
 

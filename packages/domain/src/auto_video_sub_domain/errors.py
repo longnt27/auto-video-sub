@@ -34,6 +34,11 @@ class QuotaExceededError(DomainError):
     code = "QUOTA_EXCEEDED"
     status_code = 429
 
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        super().__init__(message)
+        if code is not None:
+            self.code = code
+
 
 class ValidationError(DomainError):
     code = "VALIDATION_ERROR"

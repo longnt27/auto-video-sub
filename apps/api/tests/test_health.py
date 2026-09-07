@@ -28,6 +28,19 @@ def settings_for_test() -> Settings:
     )
 
 
+def test_phase4_translation_and_style_routes_are_mounted() -> None:
+    app = create_app(settings=settings_for_test(), probes=[])
+    paths = app.openapi()["paths"]
+
+    assert "/v1/translation/tones" in paths
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/translation/estimate" in paths
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/translation/start" in paths
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/translation/approve" in paths
+    assert "/v1/subtitle-styles/fonts" in paths
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/subtitle-style" in paths
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/subtitle-style/revisions" in paths
+
+
 @pytest.mark.asyncio
 async def test_liveness_does_not_require_dependencies() -> None:
     app = create_app(settings=settings_for_test(), probes=[Probe("db", RuntimeError("down"))])

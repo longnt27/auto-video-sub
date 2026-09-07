@@ -13,7 +13,10 @@ from auto_video_sub_application import (
     DependencyProbe,
     IdentityService,
     ProjectService,
+    SubtitleStyleRepository,
+    SubtitleStyleService,
     TranscriptService,
+    TranslationService,
     UploadService,
     check_readiness,
 )
@@ -24,13 +27,20 @@ from auto_video_sub_application.ports import (
     TranscriptWorkflowControl,
     WorkflowStarter,
 )
+from auto_video_sub_application.translation_ports import (
+    TranslationRepository,
+    TranslationWorkflowControl,
+)
 from auto_video_sub_domain import DomainError, MediaLimits
 from auto_video_sub_infrastructure import (
     S3ObjectStorage,
     SessionProvider,
     Settings,
     SqlAlchemyProductRepository,
+    SqlAlchemySubtitleStyleRepository,
     SqlAlchemyTranscriptRepository,
+    SqlAlchemyTranslationRepository,
+    TemporalTranslationWorkflowControl,
     TemporalWorkflowStarter,
     build_dependency_probes,
     create_engine,
@@ -43,6 +53,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from auto_video_sub_api.routes import router
+from auto_video_sub_api.subtitle_style_routes import router as subtitle_style_router
+from auto_video_sub_api.translation_routes import router as translation_router
 
 LOGGER = logging.getLogger(__name__)
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
@@ -62,6 +74,9 @@ def create_app(
     workflows: WorkflowStarter | None = None,
     transcript_repository: TranscriptRepository | None = None,
     transcript_workflows: TranscriptWorkflowControl | None = None,
+    translation_repository: TranslationRepository | None = None,
+    translation_workflows: TranslationWorkflowControl | None = None,
+    subtitle_style_repository: SubtitleStyleRepository | None = None,
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
@@ -110,6 +125,32 @@ def create_app(
         ):
             resolved_transcript_workflows = resolved_workflows
 
+        resolved_translation_repository = translation_repository
+        if resolved_translation_repository is None and sessions is not None:
+            resolved_translation_repository = SqlAlchemyTranslationRepository(
+                sessions,
+                default_translation_budget_micros=(
+                    resolved_settings.default_translation_budget_micros
+                ),
+                input_cost_micros_per_million_tokens=(
+                    resolved_settings.translation_input_cost_micros_per_million_tokens
+                ),
+                output_cost_micros_per_million_tokens=(
+                    resolved_settings.translation_output_cost_micros_per_million_tokens
+                ),
+            )
+        resolved_translation_workflows = (
+            translation_workflows
+            or TemporalTranslationWorkflowControl(
+                address=resolved_settings.temporal_address,
+                namespace=resolved_settings.temporal_namespace,
+                task_queue=resolved_settings.temporal_translation_task_queue,
+            )
+        )
+        resolved_subtitle_style_repository = subtitle_style_repository
+        if resolved_subtitle_style_repository is None and sessions is not None:
+            resolved_subtitle_style_repository = SqlAlchemySubtitleStyleRepository(sessions)
+
         app.state.repository = resolved_repository
         app.state.identity_service = IdentityService(resolved_repository)
         app.state.project_service = ProjectService(resolved_repository)
@@ -136,6 +177,27 @@ def create_app(
             )
             if resolved_transcript_repository is not None
             and resolved_transcript_workflows is not None
+            else None
+        )
+        app.state.translation_service = (
+            TranslationService(
+                repository=resolved_translation_repository,
+                workflows=resolved_translation_workflows,
+                provider=resolved_settings.translation_provider_name,
+                model=resolved_settings.translation_provider_model,
+                input_cost_micros_per_million_tokens=(
+                    resolved_settings.translation_input_cost_micros_per_million_tokens
+                ),
+                output_cost_micros_per_million_tokens=(
+                    resolved_settings.translation_output_cost_micros_per_million_tokens
+                ),
+            )
+            if resolved_translation_repository is not None
+            else None
+        )
+        app.state.subtitle_style_service = (
+            SubtitleStyleService(resolved_subtitle_style_repository)
+            if resolved_subtitle_style_repository is not None
             else None
         )
         try:
@@ -257,4 +319,6 @@ def create_app(
         )
 
     application.include_router(router)
+    application.include_router(translation_router)
+    application.include_router(subtitle_style_router)
     return application
