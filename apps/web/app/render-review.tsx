@@ -72,9 +72,7 @@ export default function RenderReview({
 
   const load = useCallback(async () => {
     try {
-      const next = await api<RenderSnapshot>(
-        `/projects/${projectId}/media/${mediaAssetId}/render`,
-      );
+      const next = await api<RenderSnapshot>(`/projects/${projectId}/media/${mediaAssetId}/render`);
       setRender(next);
       setAudioPolicy((current) => current || next.audio_policy);
       setError(null);
