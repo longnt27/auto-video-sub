@@ -21,6 +21,7 @@ from auto_video_sub_application.speech_ports import (
 from auto_video_sub_domain import (
     ArtifactKind,
     DurationFitAction,
+    DurationFitPolicy,
     SpeechAttempt,
     SpeechAttemptOutcome,
     SpeechStatus,
@@ -119,7 +120,11 @@ class SpeechActivities:
                 )
 
             if attempt.outcome is None:
-                attempt = await self._synthesize_and_measure(segment, attempt)
+                attempt = await self._synthesize_and_measure(
+                    attempt,
+                    policy=record.policy,
+                    rewrite_attempts_used=rewrite_index,
+                )
 
             if attempt.outcome is SpeechAttemptOutcome.FIT:
                 await self._repository.mark_segment_fit(segment.id, attempt.id)
@@ -172,7 +177,13 @@ class SpeechActivities:
                 await self._repository.mark_segment_needs_review(segment.id, attempt.id)
                 return {"status": "needs_review", "segment_id": str(segment.id)}
 
-    async def _synthesize_and_measure(self, segment: object, attempt: SpeechAttempt) -> SpeechAttempt:
+    async def _synthesize_and_measure(
+        self,
+        attempt: SpeechAttempt,
+        *,
+        policy: DurationFitPolicy,
+        rewrite_attempts_used: int,
+    ) -> SpeechAttempt:
         try:
             with tempfile.TemporaryDirectory(prefix="auto-video-sub-speech-") as temp_dir:
                 root = Path(temp_dir)
@@ -195,10 +206,8 @@ class SpeechActivities:
                     slot_us=attempt.slot_us,
                     measured_us=measured_us,
                     trimmed_us=trimmed.duration_us,
-                    rewrite_attempts_used=(
-                        attempt.attempt_index % (self._current_policy_width(attempt) or 1)
-                    ),
-                    policy=self._policy_from_attempt(attempt),
+                    rewrite_attempts_used=rewrite_attempts_used,
+                    policy=policy,
                 )
 
                 raw_artifact = await self._publish(
@@ -311,20 +320,6 @@ class SpeechActivities:
                 type=error.code,
                 non_retryable=not error.retryable,
             ) from error
-
-    @staticmethod
-    def _policy_from_attempt(attempt: SpeechAttempt):
-        from auto_video_sub_domain import DurationFitPolicy
-
-        return DurationFitPolicy(
-            version=attempt.policy_version,
-            tolerance_us=attempt.tolerance_us,
-        )
-
-    @staticmethod
-    def _current_policy_width(attempt: SpeechAttempt) -> int:
-        del attempt
-        return 3
 
     async def _publish(
         self,
