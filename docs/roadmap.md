@@ -20,13 +20,13 @@ This document is the execution source of truth for the remaining MVP work. Archi
 | 0 — Architecture | Completed | Approved technical direction and ADR baseline |
 | 1 — Reproducible skeleton | Completed | Clean checkout, local stack, CI, runnable web/API/worker processes |
 | 2 — Project, upload, and proxy | Completed | Authorized user can create a project, upload a video, validate it, generate a proxy, and play it in the browser |
-| 3 — Source transcript | **Next** | Extract Chinese subtitle text into an editable, versioned transcript |
-| 4 — Translation | Planned | Produce and review Vietnamese subtitles with controlled paid translation |
+| 3 — Source transcript | Completed | Extract Chinese subtitle text into an editable, versioned transcript |
+| 4 — Translation | **Next** | Produce and review Vietnamese subtitles with controlled paid translation |
 | 5 — Vietnamese speech | Planned | Produce fitted Vietnamese speech per translated segment |
 | 6 — Render and export | Planned | Render a reproducible final localized video and download it |
 | 7 — Production hardening | Planned | Safely operate a limited tailnet-only pilot |
 
-Phase 2 is accepted as the current product baseline. Its provisional media limits remain configuration, not a reason to block Phase 3.
+Phase 3 is accepted as the current product baseline. The next product implementation target is Phase 4 translation; Phase 2 media limits remain configuration.
 
 ---
 
@@ -66,7 +66,7 @@ Phase 2 is accepted as the current product baseline. Its provisional media limit
 
 # Remaining MVP execution plan
 
-## Phase 3 — source transcript
+## Phase 3 — source transcript — completed
 
 **Goal:** turn the uploaded Chinese-subtitled video into a reliable, editable, versioned source transcript. At the end of this phase a user must be able to correct OCR output without re-uploading or regenerating the proxy.
 
@@ -136,6 +136,8 @@ Make the phase usable:
 - Restart/retry/cancel tests pass for the new durable stages.
 - OCR/provider failures surface as actionable state instead of leaving a project permanently "processing".
 - The complete Phase 3 path runs locally on the supported Apple Silicon host with no paid provider.
+
+**Exit evidence:** source-transcript workflow/API/editor implementation, local RapidOCR runtime lock, provider/domain/application tests, and PostgreSQL/Garage/migration integration gates pass in CI.
 
 **Do not pull into Phase 3:** translation, tone controls, TTS, final rendering, arbitrary subtitle styling, or production observability expansion.
 
