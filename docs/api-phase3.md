@@ -39,6 +39,8 @@ The first adapter is RapidOCR 3.9.x with ONNX Runtime CPU. Provider-specific obj
 
 Sampled image files are ephemeral activity inputs and are deleted with the activity temp directory. Durable evidence is the normalized OCR observation set in PostgreSQL. No project upload can select an OCR executable or model path.
 
+The checked-in `uv.lock` is regenerated with the repository-pinned uv 0.11.3 and verified with `uv sync --all-packages --all-groups --frozen`, so the local OCR runtime is reproducible in CI and deployment.
+
 ## Persistence and editing
 
 Phase 3 adds:
