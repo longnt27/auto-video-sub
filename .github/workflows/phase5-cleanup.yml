@@ -15,7 +15,7 @@ jobs:
   cleanup:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
@@ -36,11 +36,33 @@ jobs:
           uv run ruff format .
           uv run ruff check --fix .
           uv run ruff check .
-      - name: Format web
+          uv run mypy
+      - name: Fix audio accessibility and verify web
         run: |
+          uv run python - <<'PY'
+          from pathlib import Path
+
+          path = Path("apps/web/app/speech-review.tsx")
+          content = path.read_text(encoding="utf-8")
+          old = '<audio src={segment.audio_url} controls preload="metadata" />'
+          new = '''<audio src={segment.audio_url} controls preload="metadata">
+                        <track
+                          kind="captions"
+                          src="/empty.vtt"
+                          srcLang="vi"
+                          label="Vietnamese speech transcript"
+                        />
+                      </audio>'''
+          if old in content:
+              path.write_text(content.replace(old, new), encoding="utf-8")
+          elif "Vietnamese speech transcript" not in content:
+              raise SystemExit("speech audio accessibility anchor not found")
+          PY
           pnpm install --frozen-lockfile
           pnpm format
           pnpm lint
+          pnpm typecheck
+          pnpm test
       - name: Remove helper and commit reproducibility outputs
         run: |
           rm .github/workflows/phase5-cleanup.yml

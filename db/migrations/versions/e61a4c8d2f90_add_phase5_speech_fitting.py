@@ -96,7 +96,12 @@ def upgrade() -> None:
             "subtitle_segment_id",
             "translation_revision_id",
             "attempt_index",
-            name="uq_speech_attempt_segment_translation_index",
+            "provider",
+            "model",
+            "model_revision",
+            "voice_id",
+            "policy_version",
+            name="uq_speech_attempt_generation_index",
         ),
     )
     op.create_index(
