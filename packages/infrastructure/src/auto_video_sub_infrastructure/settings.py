@@ -71,6 +71,25 @@ class Settings(BaseSettings):
     translation_output_cost_micros_per_million_tokens: int = Field(default=0, ge=0)
     default_translation_budget_micros: int = Field(default=0, ge=0)
     translation_request_timeout_seconds: int = Field(default=90, ge=10, le=600)
+
+    # Phase 5 local speech. Model/voice promotion stays fail-closed until the owner pins
+    # a reviewed local VieNeu snapshot and preset voice after listening/capacity evaluation.
+    tts_provider_name: str = "vieneu"
+    tts_model_name: str = "VieNeu-TTS-v3-Turbo"
+    tts_model_root: str = ""
+    tts_model_revision: str = ""
+    tts_voice_id: str = ""
+    tts_precision: str = "fp32"
+    tts_threads: int = Field(default=0, ge=0, le=128)
+    speech_audio_timeout_seconds: int = Field(default=300, ge=10, le=3600)
+    duration_tolerance_us: int = Field(default=100_000, ge=0, le=2_000_000)
+    duration_max_speed_factor_ppm: int = Field(default=1_080_000, ge=1_000_000, le=1_500_000)
+    duration_max_rewrite_attempts: int = Field(default=2, ge=0, le=10)
+    rewrite_provider_endpoint: str = ""
+    rewrite_provider_model: str = ""
+    rewrite_provider_model_revision: str = ""
+    rewrite_request_timeout_seconds: int = Field(default=90, ge=10, le=600)
+
     worker_profile: str = "core"
 
     @staticmethod
@@ -117,6 +136,8 @@ class Settings(BaseSettings):
                 raise ValueError("Translation worker requires TRANSLATION_PROVIDER_MODEL")
             if not self.translation_provider_api_key.strip():
                 raise ValueError("Translation worker requires TRANSLATION_PROVIDER_API_KEY")
+        if self.tts_precision not in {"fp32", "int8"}:
+            raise ValueError("TTS_PRECISION must be fp32 or int8")
         return self
 
 

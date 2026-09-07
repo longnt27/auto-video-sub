@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import SpeechReview from "./speech-review";
+
 type TranslationSegment = {
   id: string;
   start_us: number;
@@ -403,6 +405,13 @@ export default function SubtitleStyleReview({
           {error && <p className="status-line">{error}</p>}
         </div>
       </div>
+
+      <SpeechReview
+        projectId={projectId}
+        mediaAssetId={mediaAssetId}
+        disabled={disabled || busy}
+        onMessage={onMessage}
+      />
     </section>
   );
 }

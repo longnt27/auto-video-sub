@@ -13,6 +13,7 @@ from auto_video_sub_application import (
     DependencyProbe,
     IdentityService,
     ProjectService,
+    SpeechService,
     SubtitleStyleRepository,
     SubtitleStyleService,
     TranscriptService,
@@ -27,19 +28,22 @@ from auto_video_sub_application.ports import (
     TranscriptWorkflowControl,
     WorkflowStarter,
 )
+from auto_video_sub_application.speech_ports import SpeechRepository, SpeechWorkflowControl
 from auto_video_sub_application.translation_ports import (
     TranslationRepository,
     TranslationWorkflowControl,
 )
-from auto_video_sub_domain import DomainError, MediaLimits
+from auto_video_sub_domain import DomainError, DurationFitPolicy, MediaLimits
 from auto_video_sub_infrastructure import (
     S3ObjectStorage,
     SessionProvider,
     Settings,
     SqlAlchemyProductRepository,
+    SqlAlchemySpeechRepository,
     SqlAlchemySubtitleStyleRepository,
     SqlAlchemyTranscriptRepository,
     SqlAlchemyTranslationRepository,
+    TemporalSpeechWorkflowControl,
     TemporalTranslationWorkflowControl,
     TemporalWorkflowStarter,
     build_dependency_probes,
@@ -53,6 +57,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from auto_video_sub_api.routes import router
+from auto_video_sub_api.speech_routes import router as speech_router
 from auto_video_sub_api.subtitle_style_routes import router as subtitle_style_router
 from auto_video_sub_api.translation_routes import router as translation_router
 
@@ -76,6 +81,8 @@ def create_app(
     transcript_workflows: TranscriptWorkflowControl | None = None,
     translation_repository: TranslationRepository | None = None,
     translation_workflows: TranslationWorkflowControl | None = None,
+    speech_repository: SpeechRepository | None = None,
+    speech_workflows: SpeechWorkflowControl | None = None,
     subtitle_style_repository: SubtitleStyleRepository | None = None,
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
@@ -147,6 +154,14 @@ def create_app(
                 task_queue=resolved_settings.temporal_translation_task_queue,
             )
         )
+        resolved_speech_repository = speech_repository
+        if resolved_speech_repository is None and sessions is not None:
+            resolved_speech_repository = SqlAlchemySpeechRepository(sessions)
+        resolved_speech_workflows = speech_workflows or TemporalSpeechWorkflowControl(
+            address=resolved_settings.temporal_address,
+            namespace=resolved_settings.temporal_namespace,
+            task_queue=resolved_settings.temporal_local_ai_task_queue,
+        )
         resolved_subtitle_style_repository = subtitle_style_repository
         if resolved_subtitle_style_repository is None and sessions is not None:
             resolved_subtitle_style_repository = SqlAlchemySubtitleStyleRepository(sessions)
@@ -193,6 +208,25 @@ def create_app(
                 ),
             )
             if resolved_translation_repository is not None
+            else None
+        )
+        app.state.speech_service = (
+            SpeechService(
+                repository=resolved_speech_repository,
+                workflows=resolved_speech_workflows,
+                storage=resolved_storage,
+                provider=resolved_settings.tts_provider_name,
+                model=resolved_settings.tts_model_name,
+                model_revision=resolved_settings.tts_model_revision,
+                voice_id=resolved_settings.tts_voice_id,
+                policy=DurationFitPolicy(
+                    tolerance_us=resolved_settings.duration_tolerance_us,
+                    max_speed_factor_ppm=resolved_settings.duration_max_speed_factor_ppm,
+                    max_rewrite_attempts=resolved_settings.duration_max_rewrite_attempts,
+                ),
+                download_url_ttl=timedelta(seconds=resolved_settings.download_url_ttl_seconds),
+            )
+            if resolved_speech_repository is not None
             else None
         )
         app.state.subtitle_style_service = (
@@ -320,5 +354,6 @@ def create_app(
 
     application.include_router(router)
     application.include_router(translation_router)
+    application.include_router(speech_router)
     application.include_router(subtitle_style_router)
     return application

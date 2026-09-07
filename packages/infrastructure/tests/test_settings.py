@@ -19,15 +19,20 @@ def test_tailnet_authentication_rejects_the_committed_development_secret() -> No
         Settings(tailscale_auth_enabled=True, _env_file=None)
 
 
-def test_core_worker_does_not_require_paid_translation_credentials() -> None:
+def test_core_worker_does_not_require_paid_or_promoted_provider_credentials() -> None:
     settings = Settings(
         worker_profile="core",
         translation_provider_model="",
         translation_provider_api_key="",
+        tts_model_revision="",
+        tts_voice_id="",
+        rewrite_provider_endpoint="",
         _env_file=None,
     )
 
     assert settings.worker_profile == "core"
+    assert settings.tts_model_revision == ""
+    assert settings.tts_voice_id == ""
 
 
 @pytest.mark.parametrize(
@@ -47,6 +52,11 @@ def test_translation_worker_fails_closed_without_provider_configuration(
             translation_provider_api_key=api_key,
             _env_file=None,
         )
+
+
+def test_speech_precision_rejects_unknown_runtime_variant() -> None:
+    with pytest.raises(ValidationError, match="TTS_PRECISION"):
+        Settings(tts_precision="fp16", _env_file=None)
 
 
 def test_storage_cors_uses_one_rule_per_origin_for_garage_compatibility() -> None:

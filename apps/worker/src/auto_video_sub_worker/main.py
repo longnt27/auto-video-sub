@@ -12,6 +12,7 @@ from auto_video_sub_infrastructure import (
     S3ObjectStorage,
     SessionProvider,
     SqlAlchemyProductRepository,
+    SqlAlchemySpeechRepository,
     SqlAlchemyTranscriptRepository,
     SqlAlchemyTranslationRepository,
     build_dependency_probes,
@@ -21,8 +22,11 @@ from auto_video_sub_infrastructure import (
 from auto_video_sub_infrastructure.logging import configure_logging
 from auto_video_sub_providers import (
     FFmpegMediaProcessor,
+    FFmpegSpeechAudioProcessor,
+    LlamaCppRewriteProvider,
     OpenAIResponsesTranslationProvider,
     RapidOcrProvider,
+    VieNeuTtsProvider,
 )
 from temporalio.client import Client
 from temporalio.worker import Worker
@@ -31,6 +35,8 @@ from auto_video_sub_worker.media_ingest_workflow import MediaIngestWorkflow
 from auto_video_sub_worker.media_workflow import MediaActivities
 from auto_video_sub_worker.source_transcript_activities import SourceTranscriptActivities
 from auto_video_sub_worker.source_transcript_workflow import SourceTranscriptWorkflow
+from auto_video_sub_worker.speech_activities import SpeechActivities
+from auto_video_sub_worker.speech_workflow import SpeechWorkflow
 from auto_video_sub_worker.translation_activities import TranslationActivities
 from auto_video_sub_worker.translation_workflow import TranslationWorkflow
 
@@ -145,6 +151,7 @@ async def serve() -> int:
         default_max_storage_bytes=settings.default_max_storage_bytes,
     )
     transcript_repository = SqlAlchemyTranscriptRepository(sessions, repository)
+    speech_repository = SqlAlchemySpeechRepository(sessions)
     storage = S3ObjectStorage(
         endpoint=settings.object_store_endpoint,
         public_endpoint=settings.public_object_store_base_url,
@@ -179,6 +186,28 @@ async def serve() -> int:
         processor=processor,
         ocr=RapidOcrProvider(),
     )
+    speech_activities = SpeechActivities(
+        repository=speech_repository,
+        storage=storage,
+        tts=VieNeuTtsProvider(
+            model_root=settings.tts_model_root,
+            model_revision=settings.tts_model_revision,
+            voice_id=settings.tts_voice_id,
+            precision=settings.tts_precision,
+            threads=settings.tts_threads,
+        ),
+        audio=FFmpegSpeechAudioProcessor(
+            ffmpeg_path=settings.ffmpeg_path,
+            ffprobe_path=settings.ffprobe_path,
+            timeout_seconds=settings.speech_audio_timeout_seconds,
+        ),
+        rewriter=LlamaCppRewriteProvider(
+            endpoint=settings.rewrite_provider_endpoint,
+            model=settings.rewrite_provider_model,
+            model_revision=settings.rewrite_provider_model_revision,
+            timeout_seconds=settings.rewrite_request_timeout_seconds,
+        ),
+    )
     media_worker = Worker(
         temporal_client,
         task_queue=settings.temporal_media_task_queue,
@@ -189,18 +218,22 @@ async def serve() -> int:
             media_activities.mark_failed,
         ],
     )
-    transcript_worker = Worker(
+    local_ai_worker = Worker(
         temporal_client,
         task_queue=settings.temporal_local_ai_task_queue,
-        workflows=[SourceTranscriptWorkflow],
+        workflows=[SourceTranscriptWorkflow, SpeechWorkflow],
         activities=[
             transcript_activities.extract_and_ocr,
             transcript_activities.consolidate,
             transcript_activities.mark_failed,
+            speech_activities.list_segments,
+            speech_activities.fit_segment,
+            speech_activities.finalize,
+            speech_activities.mark_failed,
         ],
     )
     try:
-        return await _run_workers((media_worker, transcript_worker), profile="core")
+        return await _run_workers((media_worker, local_ai_worker), profile="core")
     finally:
         await engine.dispose()
 
