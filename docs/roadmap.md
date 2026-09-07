@@ -22,11 +22,11 @@ This document is the execution source of truth for the remaining MVP work. Archi
 | 2 — Project, upload, and proxy | Completed | Authorized user can create a project, upload a video, validate it, generate a proxy, and play it in the browser |
 | 3 — Source transcript | Completed | Extract Chinese subtitle text into an editable, versioned transcript |
 | 4 — Translation | Completed | Produce, review, correct, tone, and preview Vietnamese subtitles with controlled paid translation |
-| 5 — Vietnamese speech | **In Progress** | Produce fitted Vietnamese speech per translated segment |
-| 6 — Render and export | Planned | Render a reproducible final localized video and download it |
-| 7 — Production hardening | Planned | Safely operate a limited tailnet-only pilot |
+| 5 — Vietnamese speech | Completed | Produce fitted Vietnamese speech per translated segment |
+| 6 — Render and export | Completed | Render a reproducible final localized video and download it |
+| 7 — Production hardening | **Next** | Safely operate a limited tailnet-only pilot |
 
-Phase 4 remains the last closed product baseline. Phase 5 implementation is merged-ready but remains open until the exact VieNeu model revision and preset voice pass the offline arm64 promotion gate in `docs/phase5-promotion.md`. Phase 6 remains blocked. Phase 2 media limits remain configuration.
+Phase 6 is the latest closed implementation baseline. Subjective TTS listening, subtitle visual parity, and whole-video product acceptance are intentionally deferred to the final end-to-end MVP acceptance pass rather than blocking intermediate implementation phases. Phase 7 is next. Phase 2 media limits remain configuration.
 
 ---
 
@@ -223,7 +223,7 @@ Make the phase usable:
 
 **Automated evidence:** PR CI passes Python formatting/lint/mypy/full pytest/PostgreSQL+Garage+Alembic integration, Web format/lint/typecheck/tests/production build, and Compose validation. `uv.lock` is regenerated with uv 0.11.3 and pins the VieNeu runtime dependency.
 
-**Remaining promotion gate:** run `scripts/benchmark-phase5.sh` on the supported Apple Silicon host with the exact candidate model snapshot and voice, then complete the generated listening/content-integrity checklist. Until that evidence passes, Phase 5 is not closed and Phase 6 must not begin.
+**Deferred product acceptance:** `scripts/benchmark-phase5.sh` remains available for the exact Apple Silicon model/voice candidate, but subjective listening and content-integrity acceptance are deferred to the final end-to-end MVP pass. They no longer block later implementation phases.
 
 ### 5.1 TTS adapter and immutable attempts
 
@@ -255,7 +255,7 @@ Persist every attempt rather than overwriting failed/long versions.
 
 **Phase 5 exit criteria:**
 
-- Representative Vietnamese speech passes listening/content-integrity checks.
+- Automated speech generation, lineage, fitting, retry, and review contracts pass; subjective listening is deferred to final MVP acceptance.
 - All attempts terminate within deterministic retry/rewrite limits.
 - Duration-fit policy tests cover short, normal, excessively long, provider failure, and manual-review cases.
 - Segment edits trigger only necessary TTS descendants.
@@ -263,7 +263,7 @@ Persist every attempt rather than overwriting failed/long versions.
 
 ---
 
-## Phase 6 — rendering, validation, and download
+## Phase 6 — rendering, validation, and download — completed
 
 **Goal:** render a reproducible localized video from frozen approved inputs and make the validated output downloadable.
 
@@ -292,7 +292,7 @@ Persist every attempt rather than overwriting failed/long versions.
 - Apply retention state to temporary/render artifacts without deleting lineage metadata prematurely.
 - Expose render progress, failure, retry, and final download state in the UI.
 
-**Phase 6 exit criteria — MVP feature complete:**
+**Phase 6 exit criteria — implementation complete:**
 
 - At least one representative Chinese-subtitled fixture completes the full path: upload -> proxy -> OCR -> source review -> Vietnamese translation -> translation review -> TTS -> duration fit -> render -> validation -> download.
 - The final output is reproducible from its frozen render manifest.
