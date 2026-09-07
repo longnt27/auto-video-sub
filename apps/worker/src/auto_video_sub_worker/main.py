@@ -12,17 +12,20 @@ from auto_video_sub_infrastructure import (
     S3ObjectStorage,
     SessionProvider,
     SqlAlchemyProductRepository,
+    SqlAlchemyTranscriptRepository,
     build_dependency_probes,
     create_engine,
     get_settings,
 )
 from auto_video_sub_infrastructure.logging import configure_logging
-from auto_video_sub_providers import FFmpegMediaProcessor
+from auto_video_sub_providers import FFmpegMediaProcessor, RapidOcrProvider
 from temporalio.client import Client
 from temporalio.worker import Worker
 
 from auto_video_sub_worker.media_ingest_workflow import MediaIngestWorkflow
 from auto_video_sub_worker.media_workflow import MediaActivities
+from auto_video_sub_worker.source_transcript_activities import SourceTranscriptActivities
+from auto_video_sub_worker.source_transcript_workflow import SourceTranscriptWorkflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,12 +49,14 @@ async def serve() -> int:
         return 1
 
     engine = create_engine(settings.database_url)
+    sessions = SessionProvider(engine)
     repository = SqlAlchemyProductRepository(
-        SessionProvider(engine),
+        sessions,
         default_max_projects=settings.default_max_projects,
         default_max_concurrent_uploads=settings.default_max_concurrent_uploads,
         default_max_storage_bytes=settings.default_max_storage_bytes,
     )
+    transcript_repository = SqlAlchemyTranscriptRepository(sessions, repository)
     storage = S3ObjectStorage(
         endpoint=settings.object_store_endpoint,
         public_endpoint=settings.public_object_store_base_url,
@@ -66,7 +71,7 @@ async def serve() -> int:
         probe_timeout_seconds=settings.media_probe_timeout_seconds,
         proxy_timeout_seconds=settings.proxy_timeout_seconds,
     )
-    activities = MediaActivities(
+    media_activities = MediaActivities(
         repository=repository,
         storage=storage,
         processor=processor,
@@ -80,18 +85,34 @@ async def serve() -> int:
             allowed_content_types=settings.allowed_upload_content_types,
         ),
     )
+    transcript_activities = SourceTranscriptActivities(
+        repository=transcript_repository,
+        storage=storage,
+        processor=processor,
+        ocr=RapidOcrProvider(),
+    )
     temporal_client = await Client.connect(
         settings.temporal_address,
         namespace=settings.temporal_namespace,
     )
-    worker = Worker(
+    media_worker = Worker(
         temporal_client,
         task_queue=settings.temporal_media_task_queue,
         workflows=[MediaIngestWorkflow],
         activities=[
-            activities.validate_original,
-            activities.generate_proxy,
-            activities.mark_failed,
+            media_activities.validate_original,
+            media_activities.generate_proxy,
+            media_activities.mark_failed,
+        ],
+    )
+    transcript_worker = Worker(
+        temporal_client,
+        task_queue=settings.temporal_local_ai_task_queue,
+        workflows=[SourceTranscriptWorkflow],
+        activities=[
+            transcript_activities.extract_and_ocr,
+            transcript_activities.consolidate,
+            transcript_activities.mark_failed,
         ],
     )
     stop = asyncio.Event()
@@ -101,27 +122,35 @@ async def serve() -> int:
 
     LOGGER.info(
         "worker_host_ready",
-        extra={"service": "worker", "task_queue": settings.temporal_media_task_queue},
+        extra={
+            "service": "worker",
+            "task_queues": [
+                settings.temporal_media_task_queue,
+                settings.temporal_local_ai_task_queue,
+            ],
+        },
     )
-    worker_task = asyncio.create_task(worker.run())
+    media_task = asyncio.create_task(media_worker.run())
+    transcript_task = asyncio.create_task(transcript_worker.run())
     stop_task = asyncio.create_task(stop.wait())
-    done, _ = await asyncio.wait(
-        {worker_task, stop_task},
-        return_when=asyncio.FIRST_COMPLETED,
-    )
+    tasks = {media_task, transcript_task, stop_task}
+    done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
     result = 0
-    if worker_task in done and worker_task.exception() is not None:
-        LOGGER.error(
-            "worker_host_failed",
-            extra={
-                "service": "worker",
-                "exception_type": type(worker_task.exception()).__name__,
-            },
-        )
-        result = 1
-    await worker.shutdown()
-    if not worker_task.done():
-        await worker_task
+    for worker_task in (media_task, transcript_task):
+        if worker_task in done and worker_task.exception() is not None:
+            LOGGER.error(
+                "worker_host_failed",
+                extra={
+                    "service": "worker",
+                    "exception_type": type(worker_task.exception()).__name__,
+                },
+            )
+            result = 1
+            stop.set()
+    await asyncio.gather(media_worker.shutdown(), transcript_worker.shutdown())
+    for worker_task in (media_task, transcript_task):
+        if not worker_task.done():
+            await worker_task
     await engine.dispose()
     stop_task.cancel()
     await asyncio.gather(stop_task, return_exceptions=True)
