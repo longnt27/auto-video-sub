@@ -42,6 +42,7 @@ jobs:
       - name: Commit candidate and remove helper
         run: |
           chmod +x scripts/smoke-observability.sh
+          git restore --source=HEAD -- .github/workflows/ci.yml
           rm scripts/phase7_observability_patch.py .github/workflows/phase7-observability-wire.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
