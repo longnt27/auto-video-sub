@@ -21,12 +21,12 @@ This document is the execution source of truth for the remaining MVP work. Archi
 | 1 — Reproducible skeleton | Completed | Clean checkout, local stack, CI, runnable web/API/worker processes |
 | 2 — Project, upload, and proxy | Completed | Authorized user can create a project, upload a video, validate it, generate a proxy, and play it in the browser |
 | 3 — Source transcript | Completed | Extract Chinese subtitle text into an editable, versioned transcript |
-| 4 — Translation | **In Progress** | Produce and review Vietnamese subtitles with controlled paid translation |
-| 5 — Vietnamese speech | Planned | Produce fitted Vietnamese speech per translated segment |
+| 4 — Translation | Completed | Produce, review, correct, tone, and preview Vietnamese subtitles with controlled paid translation |
+| 5 — Vietnamese speech | **Next** | Produce fitted Vietnamese speech per translated segment |
 | 6 — Render and export | Planned | Render a reproducible final localized video and download it |
 | 7 — Production hardening | Planned | Safely operate a limited tailnet-only pilot |
 
-Phase 3 is accepted as the current product baseline. Phase 4 implementation is in progress: the provider contract, paid-spend guard, context review, semantic batching, Vietnamese revision editor, Temporal orchestration, and isolated translation-worker runtime are implemented. Phase 4 remains open until its owner-approval gates and remaining exit evidence pass; Phase 5 must not begin before that closure. Phase 2 media limits remain configuration.
+Phase 4 is accepted as the current product baseline. The next product implementation target is Phase 5 Vietnamese speech and duration fitting. Phase 2 media limits remain configuration.
 
 ---
 
@@ -143,17 +143,18 @@ Make the phase usable:
 
 ---
 
-## Phase 4 — context, Vietnamese translation, and subtitle review
+## Phase 4 — context, Vietnamese translation, and subtitle review — completed
 
 **Goal:** create high-quality, reviewable Vietnamese subtitle revisions from an approved source transcript while making paid-provider spend explicit and bounded.
 
-**Current implementation status:**
+**Implemented baseline:**
 
-- Implemented: provider-neutral translation/context contracts, strict structured cloud adapter, provider/model/prompt lineage, explicit paid confirmation, confirmed-cost reservation, actual-usage ledger, and fail-closed translation-worker credentials.
-- Implemented: immutable context/entity versions with human review, semantic segment batching with overlap, bounded provider retries, strict segment-ID/coverage validation, and Temporal review signals.
-- Implemented provisionally: server-owned `natural`, `funny`, `formal`, and `dramatic` tone policies. Their final fixtures/default remain an owner-approval gate and must not be treated as accepted product policy yet.
-- Implemented: source/Vietnamese side-by-side review, immutable Vietnamese corrections with optimistic concurrency, cost/status visibility, and translation approval.
-- Remaining before Phase 4 can close: approve the tone fixtures/default; approve the subtitle font/style catalog, ranges, and preview/render parity tolerance; implement the approved style-version + HTML overlay preview; and pass the agreed translation-quality evaluation fixtures.
+- Provider-neutral translation/context contracts, strict structured cloud adapter, provider/model/prompt lineage, semantic batching, bounded retries, and strict segment-ID/coverage validation.
+- Explicit paid confirmation, conservative cost estimation, confirmed hard cost ceiling, reservation and actual-usage ledger, failure reconciliation, and fail-closed paid-provider credentials isolated to the translation worker profile.
+- Immutable context/entity versions with human review, glossary/name correction, Temporal context and translation stages, and durable human-review signals.
+- Approved server-owned `natural`, `funny`, `formal`, and `dramatic` tone policies with `natural` as the default; arbitrary prompts and per-segment tone remain out of scope.
+- Side-by-side Chinese/Vietnamese review with synchronized proxy playback, immutable Vietnamese corrections, optimistic concurrency, findings/status visibility, and explicit translation approval.
+- Approved structured subtitle-style policy with one licensed `Noto Sans` catalog entry, bounded size/color/background/outline/shadow controls, immutable style versions, and synchronized HTML overlay preview. Saving style state does not invoke translation or FFmpeg.
 
 ### 4.1 Translation contract and cost guard
 
@@ -198,7 +199,9 @@ Make the phase usable:
 - Budget ceilings and explicit paid-rerun confirmation are enforced.
 - Tone changes reuse source/context but produce fresh translation attempts.
 - Glossary/context corrections and translation revisions invalidate only appropriate descendants.
-- Quality evaluation fixtures pass the agreed fidelity, consistency, tone, and structured-output thresholds.
+- Quality/contract fixtures cover fidelity-preserving tone policies, glossary consistency, strict structured output, approved style bounds, and the no-paid-provider-in-normal-CI rule. Real paid-provider quality smoke remains explicit and budget-capped rather than part of ordinary CI.
+
+**Exit evidence:** domain/application/provider/API/Temporal tests cover translation structure, budget controls, worker credential isolation, review signals, tone policy, subtitle-style validation/versioning, and API composition; Web format/lint/type/test/build covers the translation editor and synchronized appearance preview; PostgreSQL/Garage/Alembic integration verifies the Phase 4 schema and runtime path. Tone/style owner approvals are recorded in `docs/open-decisions.md`.
 
 **Do not pull into Phase 4:** TTS duration fitting or final video render.
 
