@@ -38,7 +38,7 @@ class SubtitleStyleResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_domain(cls, value: SubtitleStyleVersion) -> "SubtitleStyleResponse":
+    def from_domain(cls, value: SubtitleStyleVersion) -> SubtitleStyleResponse:
         return cls(
             id=value.id,
             project_id=value.project_id,

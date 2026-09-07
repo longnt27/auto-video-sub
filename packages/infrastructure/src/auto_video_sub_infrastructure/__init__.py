@@ -1,7 +1,9 @@
 """Infrastructure adapters and configuration."""
 
 # Import table mappings so Base.metadata always represents the full schema.
-from auto_video_sub_infrastructure import subtitle_style_models as _subtitle_style_models  # noqa: F401
+from auto_video_sub_infrastructure import (
+    subtitle_style_models as _subtitle_style_models,  # noqa: F401
+)
 from auto_video_sub_infrastructure import translation_models as _translation_models  # noqa: F401
 from auto_video_sub_infrastructure.database import SessionProvider, create_engine
 from auto_video_sub_infrastructure.probes import build_dependency_probes

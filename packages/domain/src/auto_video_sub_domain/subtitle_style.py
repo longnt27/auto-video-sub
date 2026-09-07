@@ -78,5 +78,7 @@ class SubtitleStyleVersion:
 
     def validate(self) -> None:
         if self.version < 1:
-            raise ValidationError("Subtitle style version is invalid", code="SUBTITLE_STYLE_INVALID")
+            raise ValidationError(
+                "Subtitle style version is invalid", code="SUBTITLE_STYLE_INVALID"
+            )
         self.style.validate()

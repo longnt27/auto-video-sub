@@ -95,10 +95,14 @@ class SubtitleStyleService:
         alignment: SubtitleAlignment,
     ) -> SubtitleStyleVersion:
         if expected_version < 1:
-            raise ValidationError("Expected subtitle style version is invalid", code="VERSION_INVALID")
+            raise ValidationError(
+                "Expected subtitle style version is invalid", code="VERSION_INVALID"
+            )
         font = next((item for item in FONT_CATALOG if item.id == font_id), None)
         if font is None:
-            raise ValidationError("Subtitle font is not approved", code="SUBTITLE_FONT_NOT_APPROVED")
+            raise ValidationError(
+                "Subtitle font is not approved", code="SUBTITLE_FONT_NOT_APPROVED"
+            )
         style = SubtitleStyleDraft(
             font_id=font.id,
             font_family=font.family,

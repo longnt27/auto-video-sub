@@ -8,7 +8,12 @@ from auto_video_sub_application.subtitle_style import (
     FONT_CATALOG,
     SubtitleStyleService,
 )
-from auto_video_sub_domain import SubtitleAlignment, SubtitleStyleDraft, SubtitleStyleVersion, ValidationError
+from auto_video_sub_domain import (
+    SubtitleAlignment,
+    SubtitleStyleDraft,
+    SubtitleStyleVersion,
+    ValidationError,
+)
 
 
 class MemoryStyleRepository:
@@ -66,9 +71,7 @@ class MemoryStyleRepository:
 async def test_default_style_and_font_catalog_are_pinned() -> None:
     repository = MemoryStyleRepository()
     service = SubtitleStyleService(repository)
-    result = await service.get(
-        owner_id=uuid4(), project_id=uuid4(), media_asset_id=uuid4()
-    )
+    result = await service.get(owner_id=uuid4(), project_id=uuid4(), media_asset_id=uuid4())
 
     assert result.style == DEFAULT_SUBTITLE_STYLE
     assert FONT_CATALOG[0].id == "noto-sans"
