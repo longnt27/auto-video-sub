@@ -67,9 +67,10 @@ class VieNeuTtsProvider:
                 )
             subfolder = "onnx_update" if self._precision == "fp32" else "onnx_int8"
             onnx_dir = self._model_root / subfolder
-            if not onnx_dir.is_dir():
+            codec_dir = self._model_root / "codec"
+            if not onnx_dir.is_dir() or not codec_dir.is_dir():
                 raise TtsProviderError(
-                    "Pinned VieNeu ONNX directory is missing",
+                    "Pinned VieNeu ONNX backbone or codec directory is missing",
                     code="TTS_MODEL_UNCONFIGURED",
                     retryable=False,
                 )
@@ -88,6 +89,7 @@ class VieNeuTtsProvider:
                     backend="onnx",
                     backbone_repo=str(self._model_root),
                     onnx_dir=str(onnx_dir),
+                    codec_dir=str(codec_dir),
                     precision=self._precision,
                     threads=self._threads,
                 )
