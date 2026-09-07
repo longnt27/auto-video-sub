@@ -34,6 +34,8 @@ services:
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
       - ./observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "127.0.0.1:${OTEL_HTTP_HOST_PORT:-4318}:4318"
     depends_on:
       - jaeger
     networks: [backend]
@@ -67,7 +69,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana-oss:13.2.1
+    image: grafana/grafana:13.2.1
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-local-observability-only}
