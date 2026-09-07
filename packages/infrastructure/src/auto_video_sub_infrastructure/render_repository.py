@@ -46,6 +46,7 @@ from auto_video_sub_infrastructure.speech_models import (
 )
 from auto_video_sub_infrastructure.subtitle_style_models import SubtitleStyleVersionModel
 from auto_video_sub_infrastructure.translation_models import (
+    SegmentTranslationHeadModel,
     TranslationRevisionModel,
     TranslationStateModel,
 )
@@ -232,6 +233,13 @@ class SqlAlchemyRenderRepository:
                     or attempt.final_audio_artifact_id is None
                 ):
                     raise ConflictError("Selected speech attempt is not renderable")
+                current_translation = await session.get(SegmentTranslationHeadModel, segment.id)
+                if (
+                    current_translation is None
+                    or current_translation.translation_revision_id
+                    != segment_state.translation_revision_id
+                ):
+                    raise ConflictError("Speech is stale for the current Vietnamese translation")
                 revision = await session.get(
                     TranslationRevisionModel, segment_state.translation_revision_id
                 )
