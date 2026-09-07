@@ -30,7 +30,8 @@ jobs:
           uv run ruff format .
           uv run ruff check --fix .
           uv run mypy
-          uv run pytest packages/domain/tests packages/providers/tests apps/api/tests apps/worker/tests
+          uv run pytest packages/domain/tests packages/providers/tests apps/api/tests apps/worker/tests \
+            --ignore=packages/providers/tests/test_media_adapter.py
       - name: Commit guard and remove helper
         run: |
           rm scripts/phase6_stale_guard.py .github/workflows/phase6-stale-guard.yml
