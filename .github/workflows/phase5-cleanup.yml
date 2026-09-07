@@ -29,8 +29,30 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - name: Regenerate Python lock and format Python
+      - name: Fix typed boundaries, regenerate lock, and verify Python
         run: |
+          uv run --no-sync python - <<'PY'
+          from pathlib import Path
+
+          speech = Path("packages/application/src/auto_video_sub_application/speech.py")
+          content = speech.read_text(encoding="utf-8")
+          old = """from auto_video_sub_application.speech_ports import (\n    SpeechObjectStorage,\n"""
+          new = """from auto_video_sub_application.ports import ObjectStorage\nfrom auto_video_sub_application.speech_ports import (\n"""
+          if old in content:
+              content = content.replace(old, new)
+          content = content.replace("storage: SpeechObjectStorage,", "storage: ObjectStorage,")
+          if "SpeechObjectStorage" in content:
+              raise SystemExit("stale SpeechObjectStorage service annotation remains")
+          speech.write_text(content, encoding="utf-8")
+
+          tts = Path("packages/providers/src/auto_video_sub_providers/tts.py")
+          content = tts.read_text(encoding="utf-8")
+          old = "from vieneu import Vieneu"
+          new = "from vieneu import Vieneu  # type: ignore[import-untyped]"
+          if old in content and new not in content:
+              content = content.replace(old, new)
+          tts.write_text(content, encoding="utf-8")
+          PY
           uv lock
           uv sync --all-packages --all-groups --frozen
           uv run ruff format .
