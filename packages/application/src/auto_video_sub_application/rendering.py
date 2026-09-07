@@ -53,7 +53,9 @@ class RenderService:
 
     def _validate_runtime(self) -> None:
         if not self._renderer_version or len(self._renderer_version) > 160:
-            raise ValidationError("Renderer version is not configured", code="RENDER_CONFIG_MISSING")
+            raise ValidationError(
+                "Renderer version is not configured", code="RENDER_CONFIG_MISSING"
+            )
         if not self._font_filename or len(self._font_filename) > 255:
             raise ValidationError("Render font is not configured", code="RENDER_CONFIG_MISSING")
         if _SHA256.fullmatch(self._font_checksum_sha256) is None:
@@ -111,7 +113,10 @@ class RenderService:
             project_id=project_id,
             media_asset_id=media_asset_id,
         )
-        if snapshot.output_object_key is None:
+        if (
+            snapshot.record.status is not RenderStatus.SUCCEEDED
+            or snapshot.output_object_key is None
+        ):
             return snapshot
         expires_at = datetime.now(UTC) + self._download_url_ttl
         return RenderSnapshot(

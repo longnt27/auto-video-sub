@@ -10,6 +10,7 @@ x-python-environment: &python-environment
   TEMPORAL_MEDIA_TASK_QUEUE: auto-video-sub-media
   TEMPORAL_LOCAL_AI_TASK_QUEUE: auto-video-sub-local-ai
   TEMPORAL_TRANSLATION_TASK_QUEUE: auto-video-sub-translation
+  TEMPORAL_RENDER_TASK_QUEUE: auto-video-sub-render
   OBJECT_STORE_ENDPOINT: http://garage:3900
   OBJECT_STORE_BUCKET: auto-video-sub-local
   OBJECT_STORE_REGION: garage
@@ -51,6 +52,14 @@ x-python-environment: &python-environment
   REWRITE_PROVIDER_MODEL: ${REWRITE_PROVIDER_MODEL:-}
   REWRITE_PROVIDER_MODEL_REVISION: ${REWRITE_PROVIDER_MODEL_REVISION:-}
   REWRITE_REQUEST_TIMEOUT_SECONDS: ${REWRITE_REQUEST_TIMEOUT_SECONDS:-90}
+  RENDER_RENDERER_VERSION: ${RENDER_RENDERER_VERSION:-ffmpeg-libass-v1}
+  RENDER_FONT_PATH: /fonts/NotoSans-Regular.ttf
+  RENDER_FONT_FILENAME: ${RENDER_FONT_FILENAME:-NotoSans-Regular.ttf}
+  RENDER_FONT_CHECKSUM_SHA256: ${RENDER_FONT_CHECKSUM_SHA256:-}
+  RENDER_REDUCED_ORIGINAL_GAIN_PPM: ${RENDER_REDUCED_ORIGINAL_GAIN_PPM:-200000}
+  RENDER_TIMEOUT_SECONDS: ${RENDER_TIMEOUT_SECONDS:-10800}
+  RENDER_VALIDATION_TIMEOUT_SECONDS: ${RENDER_VALIDATION_TIMEOUT_SECONDS:-300}
+  RENDER_DURATION_TOLERANCE_US: ${RENDER_DURATION_TOLERANCE_US:-500000}
 
 services:
   postgres:
@@ -189,6 +198,7 @@ services:
       TTS_MODEL_ROOT: /models/vieneu
     volumes:
       - ${TTS_MODEL_HOST_PATH:-./.local/models/vieneu}:/models/vieneu:ro
+      - ${RENDER_FONT_HOST_PATH:-./.local/fonts/NotoSans-Regular.ttf}:/fonts/NotoSans-Regular.ttf:ro
     depends_on:
       api:
         condition: service_healthy

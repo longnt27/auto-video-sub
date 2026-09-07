@@ -6,6 +6,16 @@ from auto_video_sub_application.readiness import (
     ReadinessReport,
     check_readiness,
 )
+from auto_video_sub_application.render_ports import (
+    FrozenRenderInput,
+    RenderObjectStorage,
+    RenderProcessor,
+    RenderRepository,
+    RenderSnapshot,
+    RenderWorkflowControl,
+    RenderWorkflowRepository,
+)
+from auto_video_sub_application.rendering import RenderService
 from auto_video_sub_application.services import (
     IdentityService,
     MediaView,
@@ -47,11 +57,19 @@ __all__ = [
     "TONE_POLICIES",
     "DependencyProbe",
     "DependencyStatus",
+    "FrozenRenderInput",
     "IdentityService",
     "LocalRewriteProvider",
     "MediaView",
     "ProjectService",
     "ReadinessReport",
+    "RenderObjectStorage",
+    "RenderProcessor",
+    "RenderRepository",
+    "RenderService",
+    "RenderSnapshot",
+    "RenderWorkflowControl",
+    "RenderWorkflowRepository",
     "SpeechAudioProcessor",
     "SpeechObjectStorage",
     "SpeechRepository",

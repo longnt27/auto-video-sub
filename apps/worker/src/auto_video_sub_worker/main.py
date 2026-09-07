@@ -5,6 +5,7 @@ import asyncio
 import logging
 import signal
 from collections.abc import Sequence
+from pathlib import Path
 
 from auto_video_sub_application import DependencyProbe, check_readiness
 from auto_video_sub_domain import MediaLimits
@@ -12,6 +13,7 @@ from auto_video_sub_infrastructure import (
     S3ObjectStorage,
     SessionProvider,
     SqlAlchemyProductRepository,
+    SqlAlchemyRenderRepository,
     SqlAlchemySpeechRepository,
     SqlAlchemyTranscriptRepository,
     SqlAlchemyTranslationRepository,
@@ -22,6 +24,7 @@ from auto_video_sub_infrastructure import (
 from auto_video_sub_infrastructure.logging import configure_logging
 from auto_video_sub_providers import (
     FFmpegMediaProcessor,
+    FFmpegRenderProcessor,
     FFmpegSpeechAudioProcessor,
     LlamaCppRewriteProvider,
     OpenAIResponsesTranslationProvider,
@@ -33,6 +36,8 @@ from temporalio.worker import Worker
 
 from auto_video_sub_worker.media_ingest_workflow import MediaIngestWorkflow
 from auto_video_sub_worker.media_workflow import MediaActivities
+from auto_video_sub_worker.render_activities import RenderActivities
+from auto_video_sub_worker.render_workflow import RenderWorkflow
 from auto_video_sub_worker.source_transcript_activities import SourceTranscriptActivities
 from auto_video_sub_worker.source_transcript_workflow import SourceTranscriptWorkflow
 from auto_video_sub_worker.speech_activities import SpeechActivities
@@ -152,6 +157,7 @@ async def serve() -> int:
     )
     transcript_repository = SqlAlchemyTranscriptRepository(sessions, repository)
     speech_repository = SqlAlchemySpeechRepository(sessions)
+    render_repository = SqlAlchemyRenderRepository(sessions)
     storage = S3ObjectStorage(
         endpoint=settings.object_store_endpoint,
         public_endpoint=settings.public_object_store_base_url,
@@ -208,6 +214,18 @@ async def serve() -> int:
             timeout_seconds=settings.rewrite_request_timeout_seconds,
         ),
     )
+    render_activities = RenderActivities(
+        repository=render_repository,
+        storage=storage,
+        processor=FFmpegRenderProcessor(
+            ffmpeg_path=settings.ffmpeg_path,
+            ffprobe_path=settings.ffprobe_path,
+            render_timeout_seconds=settings.render_timeout_seconds,
+            validation_timeout_seconds=settings.render_validation_timeout_seconds,
+            duration_tolerance_us=settings.render_duration_tolerance_us,
+        ),
+        font_path=Path(settings.render_font_path),
+    )
     media_worker = Worker(
         temporal_client,
         task_queue=settings.temporal_media_task_queue,
@@ -232,8 +250,19 @@ async def serve() -> int:
             speech_activities.mark_failed,
         ],
     )
+    render_worker = Worker(
+        temporal_client,
+        task_queue=settings.temporal_render_task_queue,
+        workflows=[RenderWorkflow],
+        activities=[
+            render_activities.freeze_manifest,
+            render_activities.render_video,
+            render_activities.validate_output,
+            render_activities.mark_failed,
+        ],
+    )
     try:
-        return await _run_workers((media_worker, local_ai_worker), profile="core")
+        return await _run_workers((media_worker, local_ai_worker, render_worker), profile="core")
     finally:
         await engine.dispose()
 

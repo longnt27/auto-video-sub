@@ -52,9 +52,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["output_artifact_id"], ["artifacts.id"], ondelete="RESTRICT"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["subtitle_artifact_id"], ["artifacts.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(
-            ["validation_artifact_id"], ["artifacts.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["validation_artifact_id"], ["artifacts.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "media_asset_id", "input_fingerprint", name="uq_render_media_fingerprint"

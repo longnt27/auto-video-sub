@@ -40,9 +40,9 @@ def _safe_ass_text(text: str) -> str:
     # ASS override syntax has no reliable literal escaping for every parser/version.
     # Full-width lookalikes preserve the visible character while making user text inert.
     return (
-        text.replace("\\", "＼")
-        .replace("{", "｛")
-        .replace("}", "｝")
+        text.replace("\\", chr(0xFF3C))
+        .replace("{", chr(0xFF5B))
+        .replace("}", chr(0xFF5D))
         .replace("\r\n", "\\N")
         .replace("\r", "\\N")
         .replace("\n", "\\N")
@@ -78,9 +78,7 @@ class FFmpegRenderProcessor:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(), timeout=timeout_seconds
-            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout_seconds)
         except TimeoutError as error:
             raise RenderProcessError(
                 "Media process exceeded its time limit",
@@ -157,7 +155,14 @@ class FFmpegRenderProcessor:
         output_path: Path,
     ) -> None:
         ordered_tracks = sorted(render_input.speech_tracks, key=lambda item: item.ordinal)
-        argv: list[str] = [self._ffmpeg_path, "-hide_banner", "-nostdin", "-y", "-i", str(original_path)]
+        argv: list[str] = [
+            self._ffmpeg_path,
+            "-hide_banner",
+            "-nostdin",
+            "-y",
+            "-i",
+            str(original_path),
+        ]
         for track in ordered_tracks:
             path = speech_paths.get(track.audio_artifact_id)
             if path is None:
@@ -176,12 +181,13 @@ class FFmpegRenderProcessor:
         for index, track in enumerate(ordered_tracks):
             delay_ms = max(0, track.start_us // 1000)
             label = f"speech{index}"
-            filter_parts.append(
-                f"[{speech_offset + index}:a]adelay={delay_ms}:all=1[{label}]"
-            )
+            filter_parts.append(f"[{speech_offset + index}:a]adelay={delay_ms}:all=1[{label}]")
             audio_labels.append(f"[{label}]")
 
-        if render_input.source_has_audio and render_input.audio_policy is not OriginalAudioPolicy.REMOVE:
+        if (
+            render_input.source_has_audio
+            and render_input.audio_policy is not OriginalAudioPolicy.REMOVE
+        ):
             gain = render_input.original_audio_gain_ppm / 1_000_000
             filter_parts.append(f"[0:a]volume={gain:.6f}[original_audio]")
             audio_labels.insert(0, "[original_audio]")

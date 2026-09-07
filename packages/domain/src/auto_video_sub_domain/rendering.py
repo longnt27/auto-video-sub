@@ -60,7 +60,9 @@ class RenderJob:
             raise ValidationError("Render version is invalid", code="RENDER_INPUT_INVALID")
         if self.audio_policy is OriginalAudioPolicy.RETAIN:
             if self.original_audio_gain_ppm != 1_000_000:
-                raise ValidationError("Retained audio must use unity gain", code="RENDER_AUDIO_INVALID")
+                raise ValidationError(
+                    "Retained audio must use unity gain", code="RENDER_AUDIO_INVALID"
+                )
         elif self.audio_policy is OriginalAudioPolicy.REDUCE:
             if not 0 < self.original_audio_gain_ppm < 1_000_000:
                 raise ValidationError("Reduced audio gain is invalid", code="RENDER_AUDIO_INVALID")

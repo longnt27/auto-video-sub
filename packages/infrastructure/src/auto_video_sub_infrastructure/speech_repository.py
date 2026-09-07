@@ -662,6 +662,9 @@ class SqlAlchemySpeechRepository:
             ):
                 state.status = SpeechStatus.FAILED
                 state.error_code = "TTS_SEGMENT_FAILED"
+            elif all(SpeechSegmentStatus(value) is SpeechSegmentStatus.FIT for value in statuses):
+                state.status = SpeechStatus.APPROVED
+                state.error_code = None
             else:
                 state.status = SpeechStatus.WAITING_FOR_REVIEW
                 state.error_code = None

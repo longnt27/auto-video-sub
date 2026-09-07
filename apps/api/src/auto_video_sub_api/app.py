@@ -13,6 +13,7 @@ from auto_video_sub_application import (
     DependencyProbe,
     IdentityService,
     ProjectService,
+    RenderService,
     SpeechService,
     SubtitleStyleRepository,
     SubtitleStyleService,
@@ -28,6 +29,7 @@ from auto_video_sub_application.ports import (
     TranscriptWorkflowControl,
     WorkflowStarter,
 )
+from auto_video_sub_application.render_ports import RenderRepository, RenderWorkflowControl
 from auto_video_sub_application.speech_ports import SpeechRepository, SpeechWorkflowControl
 from auto_video_sub_application.translation_ports import (
     TranslationRepository,
@@ -39,10 +41,12 @@ from auto_video_sub_infrastructure import (
     SessionProvider,
     Settings,
     SqlAlchemyProductRepository,
+    SqlAlchemyRenderRepository,
     SqlAlchemySpeechRepository,
     SqlAlchemySubtitleStyleRepository,
     SqlAlchemyTranscriptRepository,
     SqlAlchemyTranslationRepository,
+    TemporalRenderWorkflowControl,
     TemporalSpeechWorkflowControl,
     TemporalTranslationWorkflowControl,
     TemporalWorkflowStarter,
@@ -56,6 +60,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from auto_video_sub_api.render_routes import router as render_router
 from auto_video_sub_api.routes import router
 from auto_video_sub_api.speech_routes import router as speech_router
 from auto_video_sub_api.subtitle_style_routes import router as subtitle_style_router
@@ -83,6 +88,8 @@ def create_app(
     translation_workflows: TranslationWorkflowControl | None = None,
     speech_repository: SpeechRepository | None = None,
     speech_workflows: SpeechWorkflowControl | None = None,
+    render_repository: RenderRepository | None = None,
+    render_workflows: RenderWorkflowControl | None = None,
     subtitle_style_repository: SubtitleStyleRepository | None = None,
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
@@ -162,6 +169,14 @@ def create_app(
             namespace=resolved_settings.temporal_namespace,
             task_queue=resolved_settings.temporal_local_ai_task_queue,
         )
+        resolved_render_repository = render_repository
+        if resolved_render_repository is None and sessions is not None:
+            resolved_render_repository = SqlAlchemyRenderRepository(sessions)
+        resolved_render_workflows = render_workflows or TemporalRenderWorkflowControl(
+            address=resolved_settings.temporal_address,
+            namespace=resolved_settings.temporal_namespace,
+            task_queue=resolved_settings.temporal_render_task_queue,
+        )
         resolved_subtitle_style_repository = subtitle_style_repository
         if resolved_subtitle_style_repository is None and sessions is not None:
             resolved_subtitle_style_repository = SqlAlchemySubtitleStyleRepository(sessions)
@@ -227,6 +242,20 @@ def create_app(
                 download_url_ttl=timedelta(seconds=resolved_settings.download_url_ttl_seconds),
             )
             if resolved_speech_repository is not None
+            else None
+        )
+        app.state.render_service = (
+            RenderService(
+                repository=resolved_render_repository,
+                workflows=resolved_render_workflows,
+                storage=resolved_storage,
+                renderer_version=resolved_settings.render_renderer_version,
+                font_filename=resolved_settings.render_font_filename,
+                font_checksum_sha256=resolved_settings.render_font_checksum_sha256,
+                reduced_original_gain_ppm=(resolved_settings.render_reduced_original_gain_ppm),
+                download_url_ttl=timedelta(seconds=resolved_settings.download_url_ttl_seconds),
+            )
+            if resolved_render_repository is not None
             else None
         )
         app.state.subtitle_style_service = (
@@ -353,6 +382,7 @@ def create_app(
         )
 
     application.include_router(router)
+    application.include_router(render_router)
     application.include_router(translation_router)
     application.include_router(speech_router)
     application.include_router(subtitle_style_router)

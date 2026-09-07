@@ -22,9 +22,7 @@ from auto_video_sub_infrastructure.models import Base
 class RenderJobModel(Base):
     __tablename__ = "render_jobs"
     __table_args__ = (
-        UniqueConstraint(
-            "media_asset_id", "input_fingerprint", name="uq_render_media_fingerprint"
-        ),
+        UniqueConstraint("media_asset_id", "input_fingerprint", name="uq_render_media_fingerprint"),
         Index("ix_render_project_updated", "project_id", "updated_at"),
         CheckConstraint(
             "original_audio_gain_ppm >= 0 AND original_audio_gain_ppm <= 1000000",

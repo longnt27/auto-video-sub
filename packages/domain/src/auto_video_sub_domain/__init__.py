@@ -25,6 +25,7 @@ from auto_video_sub_domain.media import (
     validate_probe,
 )
 from auto_video_sub_domain.projects import Project, ProjectLifecycle, User, validate_project_title
+from auto_video_sub_domain.rendering import OriginalAudioPolicy, RenderJob, RenderStatus
 from auto_video_sub_domain.speech import (
     DurationFitAction,
     DurationFitDecision,
@@ -87,9 +88,12 @@ __all__ = [
     "MediaStatus",
     "NotFoundError",
     "OcrObservation",
+    "OriginalAudioPolicy",
     "Project",
     "ProjectLifecycle",
     "QuotaExceededError",
+    "RenderJob",
+    "RenderStatus",
     "RetentionClass",
     "SourceRevision",
     "SourceRevisionOrigin",

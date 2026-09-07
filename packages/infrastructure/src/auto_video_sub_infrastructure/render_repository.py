@@ -120,6 +120,7 @@ def _input(row: RenderJobModel) -> FrozenRenderInput:
             speech_attempt_id=UUID(str(item["speech_attempt_id"])),
             audio_artifact_id=UUID(str(item["audio_artifact_id"])),
             audio_object_key=str(item["audio_object_key"]),
+            audio_checksum_sha256=str(item["audio_checksum_sha256"]),
         )
         for item in payload["speech_tracks"]
     )
@@ -221,7 +222,9 @@ class SqlAlchemyRenderRepository:
                     or SpeechSegmentStatus(segment_state.status) is not SpeechSegmentStatus.FIT
                     or segment_state.current_attempt_id is None
                 ):
-                    raise ConflictError("Every subtitle segment needs fitted speech before rendering")
+                    raise ConflictError(
+                        "Every subtitle segment needs fitted speech before rendering"
+                    )
                 attempt = await session.get(SpeechAttemptModel, segment_state.current_attempt_id)
                 if (
                     attempt is None
@@ -305,6 +308,8 @@ class SqlAlchemyRenderRepository:
                 if RenderStatus(existing.status) in {RenderStatus.FAILED, RenderStatus.CANCELLED}:
                     existing.status = RenderStatus.PROCESSING
                     existing.workflow_id = None
+                    existing.validation_artifact_id = None
+                    existing.validation_summary = None
                     existing.error_code = None
                     existing.version += 1
                     existing.updated_at = now
@@ -382,9 +387,15 @@ class SqlAlchemyRenderRepository:
             if row is None:
                 raise NotFoundError("Render not found")
             output_key = None
-            if row.output_artifact_id is not None:
+            if (
+                RenderStatus(row.status) is RenderStatus.SUCCEEDED
+                and row.output_artifact_id is not None
+            ):
                 artifact = await session.get(ArtifactModel, row.output_artifact_id)
-                if artifact is not None and ArtifactState(artifact.state) is ArtifactState.AVAILABLE:
+                if (
+                    artifact is not None
+                    and ArtifactState(artifact.state) is ArtifactState.AVAILABLE
+                ):
                     output_key = artifact.object_key
             return RenderSnapshot(
                 record=_record(row),
@@ -490,8 +501,12 @@ class SqlAlchemyRenderRepository:
             elif role == "validation" and row.output_artifact_id is not None:
                 edge_specs.append((row.output_artifact_id, artifact.id, "validated_by"))
                 row.validation_summary = validation
-                row.status = RenderStatus.SUCCEEDED
-                row.error_code = None
+                if validation is not None and validation.get("valid") is True:
+                    row.status = RenderStatus.SUCCEEDED
+                    row.error_code = None
+                else:
+                    row.status = RenderStatus.FAILED
+                    row.error_code = "RENDER_VALIDATION_FAILED"
             for parent_id, child_id, relation in edge_specs:
                 existing_edge = await session.scalar(
                     select(ArtifactEdgeModel).where(

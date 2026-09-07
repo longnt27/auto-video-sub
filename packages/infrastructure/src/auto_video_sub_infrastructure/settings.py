@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     temporal_media_task_queue: str = "auto-video-sub-media"
     temporal_local_ai_task_queue: str = "auto-video-sub-local-ai"
     temporal_translation_task_queue: str = "auto-video-sub-translation"
+    temporal_render_task_queue: str = "auto-video-sub-render"
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     media_probe_timeout_seconds: int = Field(default=60, ge=5, le=600)
@@ -89,6 +90,17 @@ class Settings(BaseSettings):
     rewrite_provider_model: str = ""
     rewrite_provider_model_revision: str = ""
     rewrite_request_timeout_seconds: int = Field(default=90, ge=10, le=600)
+
+    # Phase 6 final rendering. Font checksum is deliberately blank until a reviewed local
+    # Noto Sans file is mounted; render admission fails closed when it is not pinned.
+    render_renderer_version: str = "ffmpeg-libass-v1"
+    render_font_path: str = ""
+    render_font_filename: str = "NotoSans-Regular.ttf"
+    render_font_checksum_sha256: str = ""
+    render_reduced_original_gain_ppm: int = Field(default=200_000, gt=0, lt=1_000_000)
+    render_timeout_seconds: int = Field(default=10_800, ge=60, le=43_200)
+    render_validation_timeout_seconds: int = Field(default=300, ge=10, le=3600)
+    render_duration_tolerance_us: int = Field(default=500_000, ge=0, le=5_000_000)
 
     worker_profile: str = "core"
 

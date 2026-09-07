@@ -61,9 +61,7 @@ class RenderActivities:
                 "source_has_audio": render_input.source_has_audio,
             },
             "transcript_version": render_input.transcript_version,
-            "translation_policy_version_id": str(
-                render_input.translation_policy_version_id
-            ),
+            "translation_policy_version_id": str(render_input.translation_policy_version_id),
             "subtitle_style_version_id": str(render_input.subtitle_style_version_id),
             "subtitle_style": {
                 "font_id": render_input.subtitle_style.font_id,
@@ -73,9 +71,7 @@ class RenderActivities:
                 "text_color": render_input.subtitle_style.text_color,
                 "outline_color": render_input.subtitle_style.outline_color,
                 "background_color": render_input.subtitle_style.background_color,
-                "background_opacity_pct": (
-                    render_input.subtitle_style.background_opacity_pct
-                ),
+                "background_opacity_pct": (render_input.subtitle_style.background_opacity_pct),
                 "outline_px": render_input.subtitle_style.outline_px,
                 "shadow_px": render_input.subtitle_style.shadow_px,
                 "alignment": render_input.subtitle_style.alignment.value,
