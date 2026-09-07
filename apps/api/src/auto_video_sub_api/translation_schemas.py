@@ -3,7 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from auto_video_sub_application.translation_ports import TranslationEstimate, TranslationSnapshot
+from auto_video_sub_application.translation_ports import (
+    TranslationEstimate,
+    TranslationSnapshot,
+)
 from auto_video_sub_domain import ContextEntity, TonePreset, new_uuid7
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -67,7 +70,9 @@ class ContextEntityInput(BaseModel):
             kind=self.kind.strip(),
             source_forms=tuple(item.strip() for item in self.source_forms),
             preferred_vietnamese=(
-                self.preferred_vietnamese.strip() if self.preferred_vietnamese is not None else None
+                self.preferred_vietnamese.strip()
+                if self.preferred_vietnamese is not None
+                else None
             ),
             confidence=self.confidence,
             ambiguous=self.ambiguous,
@@ -226,7 +231,11 @@ class TranslationResponse(BaseModel):
                     end_us=item.source.end_us,
                     source_text=item.source.current_revision.text,
                     source_version=item.source.current_revision.version,
-                    segment_version=item.source.version,
+                    segment_version=(
+                        item.translation.version
+                        if item.translation is not None
+                        else item.source.version
+                    ),
                     translation=(
                         TranslationRevisionResponse(
                             id=item.translation.id,
