@@ -37,22 +37,26 @@ jobs:
               "Phase 4 remains the last closed product baseline. Phase 5 implementation is merged-ready but remains open until the exact VieNeu model revision and preset voice pass the offline arm64 promotion gate in `docs/phase5-promotion.md`. Phase 6 remains blocked. Phase 2 media limits remain configuration.",
           )
           marker = "**Goal:** generate local Vietnamese speech for each approved translated segment and fit it to the available timing without uncontrolled loops or semantic damage.\n"
-          baseline = """
-
-**Implemented baseline:**
-
-- Local VieNeu v3 Turbo ONNX adapter with pinned local backbone and codec paths; model assets fail closed instead of being fetched at runtime.
-- Immutable per-segment speech attempts with provider/model/revision/voice/policy lineage, raw/trimmed/fitted audio artifacts, deterministic idempotency, and selective invalidation when a translation revision or generation configuration changes.
-- Deterministic fitting policy: generate -> trim edge silence -> measure -> bounded speed-up -> bounded local llama.cpp rewrite -> human review. No truncation and no unbounded regeneration loop.
-- Durable `speech-fit-v1` Temporal workflow with segment-scoped retries, human review/approval signals, cancel behavior, and segment-level repair cycles.
-- API and browser speech review surface for start/status, signed audio preview, sequence playback, attempt history, segment repair, approval, and cancellation.
-- Phase 5 schema migration, local runtime configuration, read-only model mount, provider/domain/workflow/API/Web tests, and a reproducible `linux/arm64` promotion harness that runs with container networking disabled.
-
-**Automated evidence:** PR CI passes Python formatting/lint/mypy/full pytest/PostgreSQL+Garage+Alembic integration, Web format/lint/typecheck/tests/production build, and Compose validation. `uv.lock` is regenerated with uv 0.11.3 and pins the VieNeu runtime dependency.
-
-**Remaining promotion gate:** run `scripts/benchmark-phase5.sh` on the supported Apple Silicon host with the exact candidate model snapshot and voice, then complete the generated listening/content-integrity checklist. Until that evidence passes, Phase 5 is not closed and Phase 6 must not begin.
-"""
-          if baseline.strip() not in text:
+          baseline = "\n".join(
+              [
+                  "",
+                  "",
+                  "**Implemented baseline:**",
+                  "",
+                  "- Local VieNeu v3 Turbo ONNX adapter with pinned local backbone and codec paths; model assets fail closed instead of being fetched at runtime.",
+                  "- Immutable per-segment speech attempts with provider/model/revision/voice/policy lineage, raw/trimmed/fitted audio artifacts, deterministic idempotency, and selective invalidation when a translation revision or generation configuration changes.",
+                  "- Deterministic fitting policy: generate -> trim edge silence -> measure -> bounded speed-up -> bounded local llama.cpp rewrite -> human review. No truncation and no unbounded regeneration loop.",
+                  "- Durable `speech-fit-v1` Temporal workflow with segment-scoped retries, human review/approval signals, cancel behavior, and segment-level repair cycles.",
+                  "- API and browser speech review surface for start/status, signed audio preview, sequence playback, attempt history, segment repair, approval, and cancellation.",
+                  "- Phase 5 schema migration, local runtime configuration, read-only model mount, provider/domain/workflow/API/Web tests, and a reproducible `linux/arm64` promotion harness that runs with container networking disabled.",
+                  "",
+                  "**Automated evidence:** PR CI passes Python formatting/lint/mypy/full pytest/PostgreSQL+Garage+Alembic integration, Web format/lint/typecheck/tests/production build, and Compose validation. `uv.lock` is regenerated with uv 0.11.3 and pins the VieNeu runtime dependency.",
+                  "",
+                  "**Remaining promotion gate:** run `scripts/benchmark-phase5.sh` on the supported Apple Silicon host with the exact candidate model snapshot and voice, then complete the generated listening/content-integrity checklist. Until that evidence passes, Phase 5 is not closed and Phase 6 must not begin.",
+                  "",
+              ]
+          )
+          if "**Implemented baseline:**\n\n- Local VieNeu v3 Turbo ONNX adapter" not in text:
               if marker not in text:
                   raise SystemExit("Phase 5 goal marker not found")
               text = text.replace(marker, marker + baseline)
