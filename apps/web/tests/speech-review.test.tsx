@@ -14,6 +14,7 @@ describe("speech review", () => {
 
     expect(html).toContain("Vietnamese speech");
     expect(html).toContain("Start Vietnamese speech");
-    expect(html).toContain("local-AI");
+    expect(html).toContain("VieNeu synthesis");
+    expect(html).toContain("local rewrite");
   });
 });
