@@ -26,7 +26,6 @@ exporters:
       insecure: true
   prometheus:
     endpoint: 0.0.0.0:8889
-    namespace: auto_video_sub
 
 service:
   extensions: [health_check]
