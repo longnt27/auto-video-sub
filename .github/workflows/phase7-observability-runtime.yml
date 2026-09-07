@@ -1,0 +1,110 @@
+name: Phase 7 observability runtime
+
+on:
+  push:
+    branches: [dev/observability-foundation]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase7-observability-runtime
+  cancel-in-progress: true
+
+jobs:
+  runtime-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: 0.11.3
+      - name: Install locked workspace
+        run: uv sync --all-packages --all-groups --frozen
+      - name: Start observability services
+        run: |
+          docker compose --env-file .env.example \
+            -f deploy/compose.yaml \
+            -f deploy/compose.observability.yaml \
+            up -d jaeger otel-collector prometheus grafana
+      - name: Wait for UIs
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:9090/-/ready >/dev/null \
+              && curl --fail --silent http://127.0.0.1:3200/api/health >/dev/null \
+              && curl --fail --silent http://127.0.0.1:16686/ >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file .env.example \
+            -f deploy/compose.yaml \
+            -f deploy/compose.observability.yaml ps
+          docker compose --env-file .env.example \
+            -f deploy/compose.yaml \
+            -f deploy/compose.observability.yaml logs --no-color \
+            jaeger otel-collector prometheus grafana
+          exit 1
+      - name: Emit metric and trace through OTLP
+        run: |
+          uv run python - <<'PY'
+          from auto_video_sub_infrastructure.telemetry import configure_telemetry
+
+          runtime = configure_telemetry(
+              enabled=True,
+              endpoint="http://127.0.0.1:4318",
+              service_name="auto-video-sub-ci-probe",
+              service_version="ci",
+              environment="ci",
+              sample_ratio=1.0,
+              export_interval_seconds=5,
+          )
+          attrs = {
+              "http.request.method": "GET",
+              "http.response.status_code": "200",
+          }
+          with runtime.tracer.start_as_current_span("observability.runtime.probe"):
+              runtime.http_requests.add(1, attrs)
+              runtime.http_duration_ms.record(3.0, attrs)
+          runtime.shutdown()
+          PY
+      - name: Verify Prometheus and Jaeger received telemetry
+        run: |
+          for attempt in $(seq 1 20); do
+            metrics="$(curl --fail --silent --get \
+              --data-urlencode 'query=auto_video_sub_http_requests_total' \
+              http://127.0.0.1:9090/api/v1/query)"
+            services="$(curl --fail --silent http://127.0.0.1:16686/api/services)"
+            if ! printf '%s' "$metrics" | grep -q '"result":\[\]' \
+              && printf '%s' "$services" | grep -q 'auto-video-sub-ci-probe'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          curl --silent --get \
+            --data-urlencode 'query=auto_video_sub_http_requests_total' \
+            http://127.0.0.1:9090/api/v1/query || true
+          curl --silent http://127.0.0.1:16686/api/services || true
+          docker compose --env-file .env.example \
+            -f deploy/compose.yaml \
+            -f deploy/compose.observability.yaml logs --no-color \
+            jaeger otel-collector prometheus grafana
+          exit 1
+      - name: Validate provisioned Grafana dashboard
+        run: |
+          curl --fail --silent --user admin:local-observability-only \
+            http://127.0.0.1:3200/api/dashboards/uid/auto-video-sub-api \
+            | grep -q 'Auto Video Sub - API Overview'
+      - name: Show service state
+        if: always()
+        run: |
+          docker compose --env-file .env.example \
+            -f deploy/compose.yaml \
+            -f deploy/compose.observability.yaml ps || true
+      - name: Stop observability services
+        if: always()
+        run: |
+          docker compose --env-file .env.example \
+            -f deploy/compose.yaml \
+            -f deploy/compose.observability.yaml down -v || true
