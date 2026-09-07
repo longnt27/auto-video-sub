@@ -62,4 +62,4 @@ No ordinary Phase 3 test invokes the paid translation provider.
 
 ## Exit verification
 
-Phase 3 exit verification is enforced by the normal repository CI: frozen Python dependency install, Ruff formatting/lint, mypy, pytest, pinned FFmpeg media tests, PostgreSQL/Garage/migration integration tests, web formatting/lint/typecheck/tests/production build, and Compose validation. The Phase 3 implementation passed these gates before the roadmap status was advanced to completed.
+Phase 3 exit verification is enforced by the normal repository CI: frozen Python dependency install, Ruff formatting/lint, mypy, pytest, pinned FFmpeg media tests, PostgreSQL/Garage/migration integration tests, web formatting/lint/typecheck/tests/production build, and Compose validation. The implementation gates passed before the roadmap status was advanced; the final documentation commit is required to pass the same CI again before merge.
