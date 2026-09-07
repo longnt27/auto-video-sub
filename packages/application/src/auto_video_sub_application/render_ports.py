@@ -24,6 +24,7 @@ class RenderSpeechTrack:
     speech_attempt_id: UUID
     audio_artifact_id: UUID
     audio_object_key: str
+    audio_checksum_sha256: str
 
 
 @dataclass(frozen=True, slots=True)
