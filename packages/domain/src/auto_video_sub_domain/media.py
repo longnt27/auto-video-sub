@@ -36,6 +36,10 @@ class ArtifactState(StrEnum):
 class ArtifactKind(StrEnum):
     ORIGINAL_VIDEO = "original_video"
     PROXY_VIDEO = "proxy_video"
+    SPEECH_RAW_AUDIO = "speech_raw_audio"
+    SPEECH_TRIMMED_AUDIO = "speech_trimmed_audio"
+    SPEECH_FITTED_AUDIO = "speech_fitted_audio"
+    SPEECH_ATTEMPT_ENVELOPE = "speech_attempt_envelope"
 
 
 class RetentionClass(StrEnum):

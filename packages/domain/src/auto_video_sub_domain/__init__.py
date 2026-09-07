@@ -25,6 +25,17 @@ from auto_video_sub_domain.media import (
     validate_probe,
 )
 from auto_video_sub_domain.projects import Project, ProjectLifecycle, User, validate_project_title
+from auto_video_sub_domain.speech import (
+    DurationFitAction,
+    DurationFitDecision,
+    DurationFitPolicy,
+    SpeechAttempt,
+    SpeechAttemptOutcome,
+    SpeechSegmentStatus,
+    SpeechStatus,
+    SpeechTextOrigin,
+    decide_duration_fit,
+)
 from auto_video_sub_domain.subtitle_style import (
     SubtitleAlignment,
     SubtitleStyleDraft,
@@ -67,6 +78,9 @@ __all__ = [
     "ContextEntity",
     "ContextVersion",
     "DomainError",
+    "DurationFitAction",
+    "DurationFitDecision",
+    "DurationFitPolicy",
     "MediaAsset",
     "MediaLimits",
     "MediaProbe",
@@ -79,6 +93,11 @@ __all__ = [
     "RetentionClass",
     "SourceRevision",
     "SourceRevisionOrigin",
+    "SpeechAttempt",
+    "SpeechAttemptOutcome",
+    "SpeechSegmentStatus",
+    "SpeechStatus",
+    "SpeechTextOrigin",
     "SubtitleAlignment",
     "SubtitleRegion",
     "SubtitleSegment",
@@ -99,6 +118,7 @@ __all__ = [
     "__version__",
     "consolidate_observations",
     "contains_han",
+    "decide_duration_fit",
     "new_uuid7",
     "normalize_ocr_text",
     "plan_translation_batches",
