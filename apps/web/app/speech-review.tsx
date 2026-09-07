@@ -105,10 +105,7 @@ export default function SpeechReview({
     setSpeech(next);
     setDrafts(
       Object.fromEntries(
-        next.segments.map((segment) => [
-          segment.id,
-          segment.current_attempt?.text ?? segment.text,
-        ]),
+        next.segments.map((segment) => [segment.id, segment.current_attempt?.text ?? segment.text]),
       ),
     );
   }, []);
@@ -143,7 +140,9 @@ export default function SpeechReview({
   }, [load, repairBaselineVersion, speech]);
 
   const allFit = Boolean(
-    speech && speech.segments.length > 0 && speech.segments.every((segment) => segment.status === "fit"),
+    speech &&
+      speech.segments.length > 0 &&
+      speech.segments.every((segment) => segment.status === "fit"),
   );
   const playable = useMemo(
     () => speech?.segments.filter((segment) => segment.audio_url) ?? [],
@@ -199,11 +198,14 @@ export default function SpeechReview({
     if (!speech) return;
     setBusy(true);
     try {
-      const next = await api<Speech>(`/projects/${projectId}/media/${mediaAssetId}/speech/approve`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ expected_version: speech.version }),
-      });
+      const next = await api<Speech>(
+        `/projects/${projectId}/media/${mediaAssetId}/speech/approve`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ expected_version: speech.version }),
+        },
+      );
       applySpeech(next);
       setError(null);
       onMessage?.("Vietnamese speech approved. Phase 6 can freeze these selected attempts.");
@@ -312,7 +314,8 @@ export default function SpeechReview({
                     <strong>#{segment.ordinal + 1}</strong>
                     <span>{segment.status}</span>
                     <small>
-                      slot {duration(segment.end_us - segment.start_us)} · final {duration(attempt?.final_duration_us ?? null)}
+                      slot {duration(segment.end_us - segment.start_us)} · final{" "}
+                      {duration(attempt?.final_duration_us ?? null)}
                     </small>
                   </div>
                   <div className="translation-edit">
@@ -323,9 +326,7 @@ export default function SpeechReview({
                       rows={2}
                       maxLength={4000}
                       value={drafts[segment.id] ?? attempt?.text ?? segment.text}
-                      disabled={
-                        disabled || busy || speech.status !== "waiting_for_review"
-                      }
+                      disabled={disabled || busy || speech.status !== "waiting_for_review"}
                       onChange={(event) =>
                         setDrafts((current) => ({ ...current, [segment.id]: event.target.value }))
                       }
@@ -344,13 +345,22 @@ export default function SpeechReview({
                   <div className="source-card">
                     <small>Selected audio</small>
                     {segment.audio_url ? (
-                      <audio src={segment.audio_url} controls preload="metadata" />
+                      <audio src={segment.audio_url} controls preload="metadata">
+                        <track
+                          kind="captions"
+                          src="/empty.vtt"
+                          srcLang="vi"
+                          label="Vietnamese speech transcript"
+                        />
+                      </audio>
                     ) : (
                       <p>No selectable fitted audio yet.</p>
                     )}
                     {attempt && (
                       <small>
-                        raw {duration(attempt.measured_duration_us)} · trimmed {duration(attempt.trimmed_duration_us)} · speed {(attempt.speed_factor_ppm / 1_000_000).toFixed(3)}×
+                        raw {duration(attempt.measured_duration_us)} · trimmed{" "}
+                        {duration(attempt.trimmed_duration_us)} · speed{" "}
+                        {(attempt.speed_factor_ppm / 1_000_000).toFixed(3)}×
                       </small>
                     )}
                     {segment.attempts.length > 0 && (
@@ -358,7 +368,8 @@ export default function SpeechReview({
                         <summary>{segment.attempts.length} immutable attempt(s)</summary>
                         {segment.attempts.map((item) => (
                           <p key={item.id}>
-                            #{item.attempt_index} · {item.text_origin} · {item.outcome ?? "running"} · {duration(item.final_duration_us ?? item.trimmed_duration_us)}
+                            #{item.attempt_index} · {item.text_origin} · {item.outcome ?? "running"}{" "}
+                            · {duration(item.final_duration_us ?? item.trimmed_duration_us)}
                             {item.error_code ? ` · ${item.error_code}` : ""}
                           </p>
                         ))}

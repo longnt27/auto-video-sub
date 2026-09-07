@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
-from auto_video_sub_application.ports import ObjectMetadata
 from auto_video_sub_domain import (
     ArtifactKind,
     DurationFitPolicy,
@@ -16,6 +15,8 @@ from auto_video_sub_domain import (
     SpeechTextOrigin,
     TonePreset,
 )
+
+from auto_video_sub_application.ports import ObjectMetadata
 
 
 class TtsProviderError(RuntimeError):
@@ -238,7 +239,9 @@ class SpeechWorkflowControl(Protocol):
 class SpeechWorkflowRepository(Protocol):
     async def get_record_internal(self, media_asset_id: UUID) -> SpeechRecord: ...
 
-    async def list_inputs_internal(self, media_asset_id: UUID) -> tuple[SpeechInputSegment, ...]: ...
+    async def list_inputs_internal(
+        self, media_asset_id: UUID
+    ) -> tuple[SpeechInputSegment, ...]: ...
 
     async def begin_attempt(
         self,

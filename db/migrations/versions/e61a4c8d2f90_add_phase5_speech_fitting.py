@@ -87,9 +87,15 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["parent_attempt_id"], ["speech_attempts.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["raw_audio_artifact_id"], ["artifacts.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["translation_revision_id"], ["translation_revisions.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["trimmed_audio_artifact_id"], ["artifacts.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["translation_revision_id"], ["translation_revisions.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["trimmed_audio_artifact_id"], ["artifacts.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("idempotency_key", name="uq_speech_attempt_idempotency"),
         sa.UniqueConstraint(
@@ -120,11 +126,17 @@ def upgrade() -> None:
         sa.Column("current_attempt_id", sa.Uuid(), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["current_attempt_id"], ["speech_attempts.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["current_attempt_id"], ["speech_attempts.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(["media_asset_id"], ["media_assets.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["translation_revision_id"], ["translation_revisions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["translation_revision_id"], ["translation_revisions.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("subtitle_segment_id"),
     )
     op.create_index(

@@ -64,9 +64,7 @@ class SpeechAttemptModel(Base):
         CheckConstraint("attempt_index >= 0", name="ck_speech_attempt_index_nonnegative"),
         CheckConstraint("slot_us > 0", name="ck_speech_attempt_slot_positive"),
         CheckConstraint("tolerance_us >= 0", name="ck_speech_attempt_tolerance_nonnegative"),
-        CheckConstraint(
-            "speed_factor_ppm >= 1000000", name="ck_speech_attempt_speed_minimum"
-        ),
+        CheckConstraint("speed_factor_ppm >= 1000000", name="ck_speech_attempt_speed_minimum"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -121,9 +119,7 @@ class SpeechAttemptModel(Base):
 
 class SpeechSegmentStateModel(Base):
     __tablename__ = "speech_segment_states"
-    __table_args__ = (
-        Index("ix_speech_segment_media_status", "media_asset_id", "status"),
-    )
+    __table_args__ = (Index("ix_speech_segment_media_status", "media_asset_id", "status"),)
 
     subtitle_segment_id: Mapped[UUID] = mapped_column(
         Uuid, ForeignKey("subtitle_segments.id", ondelete="CASCADE"), primary_key=True

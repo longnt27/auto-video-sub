@@ -303,7 +303,9 @@ class SpeechActivities:
                     artifacts=tuple(artifacts),
                     raw_audio_artifact_id=raw_artifact.id,
                     trimmed_audio_artifact_id=trimmed_artifact.id,
-                    final_audio_artifact_id=(final_artifact.id if final_artifact is not None else None),
+                    final_audio_artifact_id=(
+                        final_artifact.id if final_artifact is not None else None
+                    ),
                     envelope_artifact_id=envelope_artifact.id,
                     measured_duration_us=measured_us,
                     trimmed_duration_us=trimmed.duration_us,
@@ -314,7 +316,9 @@ class SpeechActivities:
                 )
         except TtsProviderError as error:
             if not error.retryable:
-                await self._repository.mark_attempt_failed(attempt_id=attempt.id, error_code=error.code)
+                await self._repository.mark_attempt_failed(
+                    attempt_id=attempt.id, error_code=error.code
+                )
             raise ApplicationError(
                 str(error),
                 type=error.code,

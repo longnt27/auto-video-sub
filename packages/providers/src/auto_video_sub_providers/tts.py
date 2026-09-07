@@ -75,7 +75,7 @@ class VieNeuTtsProvider:
                     retryable=False,
                 )
             try:
-                from vieneu import Vieneu
+                from vieneu import Vieneu  # type: ignore[import-untyped]
             except ImportError as error:
                 raise TtsProviderError(
                     "VieNeu runtime is unavailable",

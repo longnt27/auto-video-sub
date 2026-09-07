@@ -138,7 +138,9 @@ class SpeechResponse(BaseModel):
                     tone=item.input.tone,
                     status=item.status,
                     current_attempt=(
-                        cls._attempt(item.current_attempt) if item.current_attempt is not None else None
+                        cls._attempt(item.current_attempt)
+                        if item.current_attempt is not None
+                        else None
                     ),
                     attempts=[cls._attempt(attempt) for attempt in item.attempts],
                     audio_url=item.audio_url,

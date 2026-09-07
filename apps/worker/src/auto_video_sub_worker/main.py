@@ -7,7 +7,7 @@ import signal
 from collections.abc import Sequence
 
 from auto_video_sub_application import DependencyProbe, check_readiness
-from auto_video_sub_domain import DurationFitPolicy, MediaLimits
+from auto_video_sub_domain import MediaLimits
 from auto_video_sub_infrastructure import (
     S3ObjectStorage,
     SessionProvider,

@@ -174,7 +174,9 @@ class SqlAlchemySpeechRepository:
         for segment in segment_rows:
             head = await session.get(SegmentTranslationHeadModel, segment.id)  # type: ignore[attr-defined]
             if head is None:
-                raise ConflictError("Every subtitle segment needs an approved Vietnamese translation")
+                raise ConflictError(
+                    "Every subtitle segment needs an approved Vietnamese translation"
+                )
             revision = await session.get(  # type: ignore[attr-defined]
                 TranslationRevisionModel, head.translation_revision_id
             )
@@ -458,9 +460,7 @@ class SqlAlchemySpeechRepository:
                 raise NotFoundError("Speech not found")
             return _record(state)
 
-    async def list_inputs_internal(
-        self, media_asset_id: UUID
-    ) -> tuple[SpeechInputSegment, ...]:
+    async def list_inputs_internal(self, media_asset_id: UUID) -> tuple[SpeechInputSegment, ...]:
         async with self._sessions.session() as session:
             return await self._inputs(session, media_asset_id)
 
@@ -571,7 +571,10 @@ class SqlAlchemySpeechRepository:
                     )
             await session.flush()
             edge_pairs = [(raw_audio_artifact_id, trimmed_audio_artifact_id, "trimmed_from")]
-            if final_audio_artifact_id is not None and final_audio_artifact_id != trimmed_audio_artifact_id:
+            if (
+                final_audio_artifact_id is not None
+                and final_audio_artifact_id != trimmed_audio_artifact_id
+            ):
                 edge_pairs.append(
                     (trimmed_audio_artifact_id, final_audio_artifact_id, "speed_adjusted_from")
                 )
@@ -654,7 +657,9 @@ class SqlAlchemySpeechRepository:
             if not statuses:
                 state.status = SpeechStatus.FAILED
                 state.error_code = "TTS_NO_SEGMENTS"
-            elif any(SpeechSegmentStatus(value) is SpeechSegmentStatus.FAILED for value in statuses):
+            elif any(
+                SpeechSegmentStatus(value) is SpeechSegmentStatus.FAILED for value in statuses
+            ):
                 state.status = SpeechStatus.FAILED
                 state.error_code = "TTS_SEGMENT_FAILED"
             else:

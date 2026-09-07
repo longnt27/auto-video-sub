@@ -6,8 +6,8 @@ from uuid import UUID
 
 from auto_video_sub_domain import ConflictError, DurationFitPolicy, SpeechStatus, ValidationError
 
+from auto_video_sub_application.ports import ObjectStorage
 from auto_video_sub_application.speech_ports import (
-    SpeechObjectStorage,
     SpeechRepository,
     SpeechSnapshot,
     SpeechWorkflowControl,
@@ -20,7 +20,7 @@ class SpeechService:
         *,
         repository: SpeechRepository,
         workflows: SpeechWorkflowControl,
-        storage: SpeechObjectStorage,
+        storage: ObjectStorage,
         provider: str,
         model: str,
         model_revision: str,
@@ -185,6 +185,8 @@ class SpeechService:
     def _validate_configuration(self) -> None:
         self._policy.validate()
         if not self._provider or not self._model or not self._model_revision:
-            raise ValidationError("TTS provider is not configured", code="TTS_PROVIDER_UNCONFIGURED")
+            raise ValidationError(
+                "TTS provider is not configured", code="TTS_PROVIDER_UNCONFIGURED"
+            )
         if not self._voice_id:
             raise ValidationError("TTS voice is not configured", code="TTS_VOICE_UNCONFIGURED")

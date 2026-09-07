@@ -55,13 +55,21 @@ class DurationFitPolicy:
 
     def validate(self) -> None:
         if not self.version.strip() or len(self.version) > 96:
-            raise ValidationError("Duration-fit policy version is invalid", code="DURATION_POLICY_INVALID")
+            raise ValidationError(
+                "Duration-fit policy version is invalid", code="DURATION_POLICY_INVALID"
+            )
         if self.tolerance_us < 0 or self.tolerance_us > 2_000_000:
-            raise ValidationError("Duration-fit tolerance is invalid", code="DURATION_POLICY_INVALID")
+            raise ValidationError(
+                "Duration-fit tolerance is invalid", code="DURATION_POLICY_INVALID"
+            )
         if not 1_000_000 <= self.max_speed_factor_ppm <= 1_500_000:
-            raise ValidationError("Duration-fit speed limit is invalid", code="DURATION_POLICY_INVALID")
+            raise ValidationError(
+                "Duration-fit speed limit is invalid", code="DURATION_POLICY_INVALID"
+            )
         if not 0 <= self.max_rewrite_attempts <= 10:
-            raise ValidationError("Duration-fit rewrite limit is invalid", code="DURATION_POLICY_INVALID")
+            raise ValidationError(
+                "Duration-fit rewrite limit is invalid", code="DURATION_POLICY_INVALID"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,7 +130,9 @@ class SpeechAttempt:
             self.final_duration_us,
         ):
             if value is not None and value <= 0:
-                raise ValidationError("Speech duration is invalid", code="DURATION_MEASUREMENT_INVALID")
+                raise ValidationError(
+                    "Speech duration is invalid", code="DURATION_MEASUREMENT_INVALID"
+                )
         if self.silence_removed_us < 0:
             raise ValidationError("Removed silence is invalid", code="DURATION_MEASUREMENT_INVALID")
 
@@ -139,7 +149,9 @@ def decide_duration_fit(
     if slot_us <= 0:
         raise ValidationError("Speech slot must be positive", code="DURATION_SLOT_INVALID")
     if measured_us <= 0 or trimmed_us <= 0 or trimmed_us > measured_us:
-        raise ValidationError("Measured audio duration is invalid", code="DURATION_MEASUREMENT_INVALID")
+        raise ValidationError(
+            "Measured audio duration is invalid", code="DURATION_MEASUREMENT_INVALID"
+        )
     if rewrite_attempts_used < 0:
         raise ValidationError("Rewrite attempt count is invalid", code="DURATION_ATTEMPT_INVALID")
 
