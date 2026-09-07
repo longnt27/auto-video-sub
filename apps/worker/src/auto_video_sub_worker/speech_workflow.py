@@ -76,12 +76,14 @@ class SpeechWorkflow:
             for segment_id in segment_ids:
                 self._repair_cycles[segment_id] = 1
                 await self._fit_segment(payload, segment_id=segment_id, cycle_index=0)
-            await workflow.execute_activity(
+            speech_status = await workflow.execute_activity(
                 "finalize-speech-review-v1",
                 payload,
                 start_to_close_timeout=timedelta(minutes=2),
                 retry_policy=local_retry,
             )
+            if speech_status == "approved":
+                self._approved = True
 
             while not self._approved:
                 await workflow.wait_condition(lambda: self._approved or bool(self._repair_requests))
@@ -96,12 +98,14 @@ class SpeechWorkflow:
                         cycle_index=cycle_index,
                         text=request.get("text", ""),
                     )
-                    await workflow.execute_activity(
+                    speech_status = await workflow.execute_activity(
                         "finalize-speech-review-v1",
                         payload,
                         start_to_close_timeout=timedelta(minutes=2),
                         retry_policy=local_retry,
                     )
+                    if speech_status == "approved":
+                        self._approved = True
 
             return {
                 "status": "approved",

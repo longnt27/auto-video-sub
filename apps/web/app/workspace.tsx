@@ -2,6 +2,8 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
+import RenderReview from "./render-review";
+import SpeechReview from "./speech-review";
 import SubtitleStyleReview from "./subtitle-style-review";
 
 type Project = { id: string; title: string; lifecycle: string };
@@ -1003,6 +1005,22 @@ export default function Workspace() {
             disabled={translationBusy}
             onMessage={setMessage}
           />
+          {translation.status === "approved" && (
+            <>
+              <SpeechReview
+                projectId={translation.project_id}
+                mediaAssetId={translation.media_asset_id}
+                disabled={translationBusy}
+                onMessage={setMessage}
+              />
+              <RenderReview
+                projectId={translation.project_id}
+                mediaAssetId={translation.media_asset_id}
+                disabled={translationBusy}
+                onMessage={setMessage}
+              />
+            </>
+          )}
           {translation.error_code && (
             <p className="status-line">Translation error: {translation.error_code}</p>
           )}

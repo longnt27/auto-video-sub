@@ -40,6 +40,10 @@ class ArtifactKind(StrEnum):
     SPEECH_TRIMMED_AUDIO = "speech_trimmed_audio"
     SPEECH_FITTED_AUDIO = "speech_fitted_audio"
     SPEECH_ATTEMPT_ENVELOPE = "speech_attempt_envelope"
+    RENDER_MANIFEST = "render_manifest"
+    RENDER_SUBTITLE_ASS = "render_subtitle_ass"
+    RENDERED_VIDEO = "rendered_video"
+    RENDER_VALIDATION_REPORT = "render_validation_report"
 
 
 class RetentionClass(StrEnum):
