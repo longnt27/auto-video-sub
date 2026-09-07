@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from auto_video_sub_application.speech_ports import SpeechSnapshot
+from auto_video_sub_domain import SpeechAttempt
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -81,7 +82,7 @@ class SpeechResponse(BaseModel):
     updated_at: datetime
 
     @staticmethod
-    def _attempt(value: object) -> SpeechAttemptResponse:
+    def _attempt(value: SpeechAttempt) -> SpeechAttemptResponse:
         return SpeechAttemptResponse(
             id=value.id,
             attempt_index=value.attempt_index,
