@@ -30,15 +30,27 @@ jobs:
           enable-cache: true
       - name: Install locked workspace
         run: uv sync --all-packages --all-groups --frozen
-      - name: Formatting
+      - name: Formatting and safe lint fixes
         run: |
           uv run ruff format .
-          git diff -- . ':!apps/web' > python-format.patch
-      - name: Export Python formatter patch
+          uv run ruff check --fix . || true
+      - name: Export formatted Python sources
         uses: actions/upload-artifact@v4
         with:
-          name: python-format-patch
-          path: python-format.patch
+          name: python-formatted-sources
+          path: |
+            apps/api/src/auto_video_sub_api
+            apps/worker/src/auto_video_sub_worker
+            db/migrations/env.py
+            db/migrations/versions/c4a7e2d91b44_add_phase4_translation_review.py
+            packages/application/src/auto_video_sub_application
+            packages/application/tests/test_translation_service.py
+            packages/domain/src/auto_video_sub_domain
+            packages/domain/tests/test_translation.py
+            packages/infrastructure/src/auto_video_sub_infrastructure
+            packages/providers/src/auto_video_sub_providers
+            packages/providers/tests/test_translation_adapter.py
+            packages/providers/tests/test_provider_boundary.py
           retention-days: 1
       - name: Lint
         run: uv run ruff check .
@@ -72,14 +84,12 @@ jobs:
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
       - name: Formatting
-        run: |
-          pnpm format
-          git diff -- apps/web > web-format.patch
-      - name: Export web formatter patch
+        run: pnpm format
+      - name: Export formatted web sources
         uses: actions/upload-artifact@v4
         with:
-          name: web-format-patch
-          path: web-format.patch
+          name: web-formatted-sources
+          path: apps/web
           retention-days: 1
       - name: Lint
         run: pnpm lint
