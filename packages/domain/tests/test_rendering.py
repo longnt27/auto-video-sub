@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -62,10 +63,9 @@ def test_render_job_rejects_audio_policy_gain_mismatch(
 
 
 def test_render_job_requires_pinned_font_checksum() -> None:
-    value = _job(policy=OriginalAudioPolicy.REMOVE, gain=0)
-    invalid = RenderJob(
-        **{field: getattr(value, field) for field in value.__dataclass_fields__ if field != "font_checksum_sha256"},
+    value = replace(
+        _job(policy=OriginalAudioPolicy.REMOVE, gain=0),
         font_checksum_sha256="floating-font",
     )
     with pytest.raises(ValidationError, match="checksum"):
-        invalid.validate()
+        value.validate()
