@@ -47,6 +47,16 @@ class EstimateRepository:
         return 4, self.segments
 
 
+class CapturePrepareRepository(EstimateRepository):
+    def __init__(self, source_texts: tuple[str, ...]) -> None:
+        super().__init__(source_texts)
+        self.prepare_kwargs: dict[str, object] = {}
+
+    async def prepare(self, **kwargs: object):
+        self.prepare_kwargs = kwargs
+        raise RuntimeError("stop after prepare")
+
+
 class NoopWorkflows:
     pass
 
@@ -105,6 +115,24 @@ async def test_confirmed_ceiling_must_cover_current_estimate() -> None:
         )
 
     assert error.value.code == "TRANSLATION_BUDGET_CONFIRMATION_EXCEEDED"
+
+
+@pytest.mark.asyncio
+async def test_confirmed_ceiling_is_forwarded_as_the_repository_reservation() -> None:
+    repository = CapturePrepareRepository(("你好世界", "我们走吧"))
+
+    with pytest.raises(RuntimeError, match="stop after prepare"):
+        await service(repository).start(
+            owner_id=uuid4(),
+            project_id=uuid4(),
+            media_asset_id=uuid4(),
+            preset=TonePreset.NATURAL,
+            confirm_paid=True,
+            max_cost_micros=5000,
+        )
+
+    assert repository.prepare_kwargs["estimated_cost_micros"] == 1536
+    assert repository.prepare_kwargs["max_cost_micros"] == 5000
 
 
 def test_tone_catalog_is_server_owned_and_versioned() -> None:
