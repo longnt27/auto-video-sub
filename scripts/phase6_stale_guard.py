@@ -24,7 +24,9 @@ old_guard = '''                revision = await session.get(
                 if revision is None or revision.id != attempt.translation_revision_id:
                     raise ConflictError("Speech is stale for the current Vietnamese translation")
 '''
-new_guard = '''                current_translation = await session.get(SegmentTranslationHeadModel, segment.id)
+new_guard = '''                current_translation = await session.get(
+                    SegmentTranslationHeadModel, segment.id
+                )
                 if (
                     current_translation is None
                     or current_translation.translation_revision_id
