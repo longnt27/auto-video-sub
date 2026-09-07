@@ -1,0 +1,31 @@
+name: Phase 3 lockfile helper
+
+on:
+  pull_request:
+    paths:
+      - "packages/providers/pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/phase3-lockfile.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-lockfile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: 0.11.3
+      - name: Regenerate workspace lockfile
+        run: uv lock
+      - name: Verify frozen install from generated lockfile
+        run: uv sync --all-packages --all-groups --frozen
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase3-uv-lock
+          path: uv.lock
+          if-no-files-found: error
+          retention-days: 1

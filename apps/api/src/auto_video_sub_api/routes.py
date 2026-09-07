@@ -222,3 +222,22 @@ async def cancel_transcript(
         media_asset_id=media_asset_id,
     )
     return TranscriptResponse.from_domain(snapshot)
+
+
+@router.post(
+    "/projects/{project_id}/media/{media_asset_id}/transcript/restart",
+    response_model=TranscriptResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def restart_transcript(
+    project_id: UUID,
+    media_asset_id: UUID,
+    user: CurrentUser,
+    request: Request,
+) -> TranscriptResponse:
+    snapshot = await request.app.state.transcript_service.restart(
+        owner_id=user.id,
+        project_id=project_id,
+        media_asset_id=media_asset_id,
+    )
+    return TranscriptResponse.from_domain(snapshot)
