@@ -19,7 +19,7 @@ class RenderWorkflow:
                 start_to_close_timeout=timedelta(minutes=2),
                 retry_policy=RetryPolicy(maximum_attempts=3),
             )
-            await workflow.execute_activity(
+            output_object_key = await workflow.execute_activity(
                 "render-video-v1",
                 payload,
                 start_to_close_timeout=timedelta(hours=4),
@@ -33,7 +33,7 @@ class RenderWorkflow:
             )
             await workflow.execute_activity(
                 "validate-render-output-v1",
-                payload,
+                {**payload, "output_object_key": output_object_key},
                 start_to_close_timeout=timedelta(minutes=10),
                 retry_policy=RetryPolicy(maximum_attempts=2),
             )
