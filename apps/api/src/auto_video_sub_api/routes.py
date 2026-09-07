@@ -9,10 +9,15 @@ from fastapi import APIRouter, Header, Request, status
 
 from auto_video_sub_api.auth import CurrentUser
 from auto_video_sub_api.schemas import (
+    ApproveTranscriptRequest,
     CreateProjectRequest,
     CreateUploadIntentRequest,
+    EditSourceSegmentRequest,
     MediaResponse,
     ProjectResponse,
+    StartTranscriptRequest,
+    SubtitleSegmentResponse,
+    TranscriptResponse,
     UploadIntentResponse,
 )
 
@@ -117,3 +122,103 @@ async def get_media(
         media_asset_id=media_asset_id,
     )
     return MediaResponse.from_view(view)
+
+
+@router.post(
+    "/projects/{project_id}/media/{media_asset_id}/transcript/start",
+    response_model=TranscriptResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def start_transcript(
+    project_id: UUID,
+    media_asset_id: UUID,
+    body: StartTranscriptRequest,
+    user: CurrentUser,
+    request: Request,
+) -> TranscriptResponse:
+    snapshot = await request.app.state.transcript_service.start(
+        owner_id=user.id,
+        project_id=project_id,
+        media_asset_id=media_asset_id,
+        region=body.to_domain(),
+    )
+    return TranscriptResponse.from_domain(snapshot)
+
+
+@router.get(
+    "/projects/{project_id}/media/{media_asset_id}/transcript",
+    response_model=TranscriptResponse,
+)
+async def get_transcript(
+    project_id: UUID,
+    media_asset_id: UUID,
+    user: CurrentUser,
+    request: Request,
+) -> TranscriptResponse:
+    snapshot = await request.app.state.transcript_service.get(
+        owner_id=user.id,
+        project_id=project_id,
+        media_asset_id=media_asset_id,
+    )
+    return TranscriptResponse.from_domain(snapshot)
+
+
+@router.post(
+    "/projects/{project_id}/media/{media_asset_id}/transcript/segments/{segment_id}/revisions",
+    response_model=SubtitleSegmentResponse,
+)
+async def edit_source_segment(
+    project_id: UUID,
+    media_asset_id: UUID,
+    segment_id: UUID,
+    body: EditSourceSegmentRequest,
+    user: CurrentUser,
+    request: Request,
+) -> SubtitleSegmentResponse:
+    segment = await request.app.state.transcript_service.edit_segment(
+        owner_id=user.id,
+        project_id=project_id,
+        media_asset_id=media_asset_id,
+        segment_id=segment_id,
+        text=body.text,
+        expected_version=body.expected_version,
+    )
+    return SubtitleSegmentResponse.from_domain(segment)
+
+
+@router.post(
+    "/projects/{project_id}/media/{media_asset_id}/transcript/approve",
+    response_model=TranscriptResponse,
+)
+async def approve_transcript(
+    project_id: UUID,
+    media_asset_id: UUID,
+    body: ApproveTranscriptRequest,
+    user: CurrentUser,
+    request: Request,
+) -> TranscriptResponse:
+    snapshot = await request.app.state.transcript_service.approve(
+        owner_id=user.id,
+        project_id=project_id,
+        media_asset_id=media_asset_id,
+        expected_version=body.expected_version,
+    )
+    return TranscriptResponse.from_domain(snapshot)
+
+
+@router.post(
+    "/projects/{project_id}/media/{media_asset_id}/transcript/cancel",
+    response_model=TranscriptResponse,
+)
+async def cancel_transcript(
+    project_id: UUID,
+    media_asset_id: UUID,
+    user: CurrentUser,
+    request: Request,
+) -> TranscriptResponse:
+    snapshot = await request.app.state.transcript_service.cancel(
+        owner_id=user.id,
+        project_id=project_id,
+        media_asset_id=media_asset_id,
+    )
+    return TranscriptResponse.from_domain(snapshot)
