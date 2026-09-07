@@ -14,7 +14,8 @@ _WHITESPACE = re.compile(r"\s+")
 class TranscriptStatus(StrEnum):
     NOT_STARTED = "not_started"
     PROCESSING = "processing"
-    READY = "ready"
+    WAITING_FOR_REVIEW = "waiting_for_review"
+    APPROVED = "approved"
     FAILED = "failed"
     CANCELLED = "cancelled"
 
