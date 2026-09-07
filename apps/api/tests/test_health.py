@@ -55,6 +55,15 @@ def test_phase5_speech_routes_are_mounted() -> None:
     assert "/v1/projects/{project_id}/media/{media_asset_id}/speech/cancel" in paths
 
 
+def test_phase6_render_routes_are_mounted() -> None:
+    app = create_app(settings=settings_for_test(), probes=[])
+    paths = app.openapi()["paths"]
+
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/render/start" in paths
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/render" in paths
+    assert "/v1/projects/{project_id}/media/{media_asset_id}/render/cancel" in paths
+
+
 @pytest.mark.asyncio
 async def test_liveness_does_not_require_dependencies() -> None:
     app = create_app(settings=settings_for_test(), probes=[Probe("db", RuntimeError("down"))])
