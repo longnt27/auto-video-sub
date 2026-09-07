@@ -8,6 +8,8 @@ x-python-environment: &python-environment
   TEMPORAL_NAMESPACE: default
   TEMPORAL_TASK_QUEUE: auto-video-sub-workflow
   TEMPORAL_MEDIA_TASK_QUEUE: auto-video-sub-media
+  TEMPORAL_LOCAL_AI_TASK_QUEUE: auto-video-sub-local-ai
+  TEMPORAL_TRANSLATION_TASK_QUEUE: auto-video-sub-translation
   OBJECT_STORE_ENDPOINT: http://garage:3900
   OBJECT_STORE_BUCKET: auto-video-sub-local
   OBJECT_STORE_REGION: garage
@@ -28,6 +30,13 @@ x-python-environment: &python-environment
   DEFAULT_MAX_PROJECTS: "10"
   DEFAULT_MAX_CONCURRENT_UPLOADS: "1"
   DEFAULT_MAX_STORAGE_BYTES: "4294967296"
+  TRANSLATION_PROVIDER_NAME: ${TRANSLATION_PROVIDER_NAME:-openai}
+  TRANSLATION_PROVIDER_BASE_URL: ${TRANSLATION_PROVIDER_BASE_URL:-https://api.openai.com/v1/responses}
+  TRANSLATION_PROVIDER_MODEL: ${TRANSLATION_PROVIDER_MODEL:-}
+  TRANSLATION_INPUT_COST_MICROS_PER_MILLION_TOKENS: ${TRANSLATION_INPUT_COST_MICROS_PER_MILLION_TOKENS:-0}
+  TRANSLATION_OUTPUT_COST_MICROS_PER_MILLION_TOKENS: ${TRANSLATION_OUTPUT_COST_MICROS_PER_MILLION_TOKENS:-0}
+  DEFAULT_TRANSLATION_BUDGET_MICROS: ${DEFAULT_TRANSLATION_BUDGET_MICROS:-0}
+  TRANSLATION_REQUEST_TIMEOUT_SECONDS: ${TRANSLATION_REQUEST_TIMEOUT_SECONDS:-90}
 
 services:
   postgres:
@@ -162,6 +171,29 @@ services:
     environment:
       <<: *python-environment
       SERVICE_NAME: auto-video-sub-worker
+      WORKER_PROFILE: core
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "auto-video-sub-worker", "--check"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 5s
+    networks: [backend]
+    restart: unless-stopped
+
+  translation-worker:
+    profiles: [translation]
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      <<: *python-environment
+      SERVICE_NAME: auto-video-sub-translation-worker
+      WORKER_PROFILE: translation
+      TRANSLATION_PROVIDER_API_KEY: ${TRANSLATION_PROVIDER_API_KEY:-}
     depends_on:
       api:
         condition: service_healthy
