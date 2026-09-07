@@ -1,0 +1,59 @@
+name: Phase 4 style finalize
+
+on:
+  push:
+    branches: [dev/translation-review]
+    paths: [.github/workflows/phase4-style-finalize.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: dev/translation-review
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11.15.1
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Wire synchronized style review into workspace
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("apps/web/app/workspace.tsx")
+          text = path.read_text()
+          import_anchor = 'import { type FormEvent, useCallback, useEffect, useState } from "react";\n'
+          style_import = 'import SubtitleStyleReview from "./subtitle-style-review";\n'
+          if style_import not in text:
+              if import_anchor not in text:
+                  raise SystemExit("workspace import anchor missing")
+              text = text.replace(import_anchor, import_anchor + "\n" + style_import, 1)
+
+          anchor = '          {translation.error_code && (\n'
+          block = '''          <SubtitleStyleReview\n            projectId={translation.project_id}\n            mediaAssetId={translation.media_asset_id}\n            proxyUrl={media?.proxy_url ?? null}\n            segments={translation.segments}\n            disabled={translationBusy}\n            onMessage={setMessage}\n          />\n          {translation.error_code && (\n'''
+          if '<SubtitleStyleReview' not in text:
+              if anchor not in text:
+                  raise SystemExit("workspace style insertion anchor missing")
+              text = text.replace(anchor, block, 1)
+          path.write_text(text)
+          PY
+      - run: pnpm --filter @auto-video-sub/web format
+      - run: pnpm --filter @auto-video-sub/web lint
+      - run: pnpm --filter @auto-video-sub/web typecheck
+      - run: pnpm --filter @auto-video-sub/web test
+      - name: Commit finalized UI and remove helper workflow
+        run: |
+          rm .github/workflows/phase4-style-finalize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/app/workspace.tsx apps/web/app/subtitle-style-review.tsx .github/workflows/phase4-style-finalize.yml
+          git commit -m "feat(style): wire synchronized subtitle preview"
+          git push origin HEAD:dev/translation-review
