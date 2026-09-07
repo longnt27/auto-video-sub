@@ -2,7 +2,6 @@ import json
 from uuid import uuid4
 
 import pytest
-
 from auto_video_sub_application.translation_ports import (
     ContextExtractionRequest,
     TranslationBatchRequest,
@@ -18,7 +17,9 @@ def response(payload: dict[str, object], *, input_tokens: int = 10, output_token
         "output": [
             {
                 "type": "message",
-                "content": [{"type": "output_text", "text": json.dumps(payload, ensure_ascii=False)}],
+                "content": [
+                    {"type": "output_text", "text": json.dumps(payload, ensure_ascii=False)}
+                ],
             }
         ],
         "usage": {"input_tokens": input_tokens, "output_tokens": output_tokens},
@@ -60,7 +61,14 @@ async def test_context_adapter_uses_strict_schema_and_untrusted_data_boundary() 
             project_id=uuid4(),
             media_asset_id=uuid4(),
             transcript_version=3,
-            segments=(TranslationSourceSegment(segment_id, 0, 1_000_000, "小明，我们走吧"),),
+            segments=(
+                TranslationSourceSegment(
+                    segment_id,
+                    0,
+                    1_000_000,
+                    "小明，我们走吧",  # noqa: RUF001
+                ),
+            ),
             prompt_version="context-v1",
             instructions="Extract context faithfully.",
         )

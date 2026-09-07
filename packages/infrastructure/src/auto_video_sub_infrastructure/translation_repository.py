@@ -121,7 +121,9 @@ class SqlAlchemyTranslationRepository:
         self._input_price = input_cost_micros_per_million_tokens
         self._output_price = output_cost_micros_per_million_tokens
 
-    async def _owned_state(self, session: object, owner_id: UUID, project_id: UUID, media_asset_id: UUID):
+    async def _owned_state(
+        self, session: object, owner_id: UUID, project_id: UUID, media_asset_id: UUID
+    ):
         return await session.scalar(  # type: ignore[attr-defined]
             select(TranslationStateModel)
             .join(ProjectModel, ProjectModel.id == TranslationStateModel.project_id)
@@ -132,7 +134,9 @@ class SqlAlchemyTranslationRepository:
             )
         )
 
-    async def _source_segments(self, session: object, media_asset_id: UUID) -> tuple[SubtitleSegment, ...]:
+    async def _source_segments(
+        self, session: object, media_asset_id: UUID
+    ) -> tuple[SubtitleSegment, ...]:
         rows = (
             await session.scalars(  # type: ignore[attr-defined]
                 select(SubtitleSegmentModel)
@@ -161,7 +165,11 @@ class SqlAlchemyTranslationRepository:
                         version=source.version,
                         text=source.text,
                         origin=SourceRevisionOrigin(source.origin),
-                        confidence=(source.confidence_ppm / 1_000_000 if source.confidence_ppm is not None else None),
+                        confidence=(
+                            source.confidence_ppm / 1_000_000
+                            if source.confidence_ppm is not None
+                            else None
+                        ),
                         editor_id=source.editor_id,
                         parent_revision_id=source.parent_revision_id,
                         created_at=source.created_at,
@@ -251,11 +259,15 @@ class SqlAlchemyTranslationRepository:
             raise ConflictError("Confirmed translation budget does not cover the estimate")
         async with self._sessions.session() as session, session.begin():
             project = await session.scalar(
-                select(ProjectModel).where(ProjectModel.id == project_id, ProjectModel.owner_id == owner_id)
+                select(ProjectModel).where(
+                    ProjectModel.id == project_id, ProjectModel.owner_id == owner_id
+                )
             )
             if project is None:
                 raise NotFoundError("Project not found")
-            transcript = await session.get(TranscriptStateModel, media_asset_id, with_for_update=True)
+            transcript = await session.get(
+                TranscriptStateModel, media_asset_id, with_for_update=True
+            )
             if transcript is None or transcript.project_id != project_id:
                 raise NotFoundError("Source transcript not found")
             if TranscriptStatus(transcript.status) is not TranscriptStatus.APPROVED:
@@ -263,7 +275,9 @@ class SqlAlchemyTranslationRepository:
 
             state = await session.get(TranslationStateModel, media_asset_id, with_for_update=True)
             if state is not None:
-                current_policy = await session.get(TranslationPolicyVersionModel, state.policy_version_id)
+                current_policy = await session.get(
+                    TranslationPolicyVersionModel, state.policy_version_id
+                )
                 if current_policy is None:
                     raise RuntimeError("Translation policy is missing")
                 current_status = TranslationStatus(state.status)
@@ -277,11 +291,15 @@ class SqlAlchemyTranslationRepository:
                     TranslationStatus.FAILED,
                     TranslationStatus.CANCELLED,
                 }:
-                    raise ConflictError("Cancel or finish the current translation before changing tone")
+                    raise ConflictError(
+                        "Cancel or finish the current translation before changing tone"
+                    )
                 if state.reserved_cost_micros:
                     await self._reconcile_budget_locked(session, state, owner_id)
 
-            budget = await session.get(TranslationBudgetAccountModel, owner_id, with_for_update=True)
+            budget = await session.get(
+                TranslationBudgetAccountModel, owner_id, with_for_update=True
+            )
             now = datetime.now(UTC)
             if budget is None:
                 budget = TranslationBudgetAccountModel(
@@ -293,9 +311,14 @@ class SqlAlchemyTranslationRepository:
                 )
                 session.add(budget)
                 await session.flush()
-            if budget.used_cost_micros + budget.reserved_cost_micros + estimated_cost_micros > budget.max_cost_micros:
-                raise QuotaExceededError("Translation budget exceeded", code="TRANSLATION_BUDGET_EXCEEDED")
-            budget.reserved_cost_micros += estimated_cost_micros
+            if (
+                budget.used_cost_micros + budget.reserved_cost_micros + max_cost_micros
+                > budget.max_cost_micros
+            ):
+                raise QuotaExceededError(
+                    "Translation budget exceeded", code="TRANSLATION_BUDGET_EXCEEDED"
+                )
+            budget.reserved_cost_micros += max_cost_micros
             budget.updated_at = now
 
             latest_policy_version = await session.scalar(
@@ -329,7 +352,7 @@ class SqlAlchemyTranslationRepository:
                     workflow_id=None,
                     error_code=None,
                     estimated_cost_micros=estimated_cost_micros,
-                    reserved_cost_micros=estimated_cost_micros,
+                    reserved_cost_micros=max_cost_micros,
                     actual_cost_micros=0,
                     findings={"items": []},
                     version=1,
@@ -345,7 +368,7 @@ class SqlAlchemyTranslationRepository:
                 state.workflow_id = None
                 state.error_code = None
                 state.estimated_cost_micros = estimated_cost_micros
-                state.reserved_cost_micros = estimated_cost_micros
+                state.reserved_cost_micros = max_cost_micros
                 state.actual_cost_micros = 0
                 state.findings = {"items": []}
                 state.version += 1
@@ -387,7 +410,9 @@ class SqlAlchemyTranslationRepository:
                 head = await session.get(SegmentTranslationHeadModel, source.id)
                 revision = None
                 if head is not None:
-                    revision_row = await session.get(TranslationRevisionModel, head.translation_revision_id)
+                    revision_row = await session.get(
+                        TranslationRevisionModel, head.translation_revision_id
+                    )
                     if revision_row is None:
                         raise RuntimeError("Translation head revision is missing")
                     if revision_row.policy_version_id == state.policy_version_id:
@@ -460,7 +485,9 @@ class SqlAlchemyTranslationRepository:
                         confidence_ppm=round(entity.confidence * 1_000_000),
                         ambiguous=entity.ambiguous,
                         notes=entity.notes,
-                        evidence_segment_ids={"items": [str(value) for value in entity.evidence_segment_ids]},
+                        evidence_segment_ids={
+                            "items": [str(value) for value in entity.evidence_segment_ids]
+                        },
                     )
                 )
             state.context_version_id = version.id
@@ -631,12 +658,16 @@ class SqlAlchemyTranslationRepository:
             state = await session.get(TranslationStateModel, media_asset_id, with_for_update=True)
             if state is None:
                 raise NotFoundError("Translation state not found")
-            if TranslationStatus(state.status) in {
-                TranslationStatus.WAITING_FOR_CONTEXT_REVIEW,
-                TranslationStatus.TRANSLATING,
-                TranslationStatus.WAITING_FOR_REVIEW,
-                TranslationStatus.APPROVED,
-            } and state.context_version_id is not None:
+            if (
+                TranslationStatus(state.status)
+                in {
+                    TranslationStatus.WAITING_FOR_CONTEXT_REVIEW,
+                    TranslationStatus.TRANSLATING,
+                    TranslationStatus.WAITING_FOR_REVIEW,
+                    TranslationStatus.APPROVED,
+                }
+                and state.context_version_id is not None
+            ):
                 context = await self._context(session, state.context_version_id)
                 if context is None:
                     raise RuntimeError("Translation context is missing")
@@ -674,7 +705,9 @@ class SqlAlchemyTranslationRepository:
                         confidence_ppm=round(item.confidence * 1_000_000),
                         ambiguous=item.ambiguous,
                         notes=item.notes,
-                        evidence_segment_ids={"items": [str(value) for value in item.evidence_segment_ids]},
+                        evidence_segment_ids={
+                            "items": [str(value) for value in item.evidence_segment_ids]
+                        },
                     )
                 )
             for question in result.unresolved_questions:
@@ -731,7 +764,9 @@ class SqlAlchemyTranslationRepository:
                     media_asset_id=media_asset_id,
                     ordinal=plan.ordinal,
                     owned_segment_ids={"items": [str(value) for value in plan.owned_segment_ids]},
-                    overlap_segment_ids={"items": [str(value) for value in plan.overlap_segment_ids]},
+                    overlap_segment_ids={
+                        "items": [str(value) for value in plan.overlap_segment_ids]
+                    },
                     context_version_id=state.context_version_id,
                     policy_version_id=state.policy_version_id,
                     status="pending",
@@ -745,8 +780,12 @@ class SqlAlchemyTranslationRepository:
     def _batch_record(self, row: TranslationBatchModel) -> TranslationBatchRecord:
         plan = TranslationBatchPlan(
             ordinal=row.ordinal,
-            owned_segment_ids=tuple(UUID(str(value)) for value in row.owned_segment_ids.get("items", [])),
-            overlap_segment_ids=tuple(UUID(str(value)) for value in row.overlap_segment_ids.get("items", [])),
+            owned_segment_ids=tuple(
+                UUID(str(value)) for value in row.owned_segment_ids.get("items", [])
+            ),
+            overlap_segment_ids=tuple(
+                UUID(str(value)) for value in row.overlap_segment_ids.get("items", [])
+            ),
         )
         return TranslationBatchRecord(
             id=row.id,
@@ -783,13 +822,17 @@ class SqlAlchemyTranslationRepository:
                 raise NotFoundError("Translation batch not found")
             if batch.status == "succeeded":
                 return
-            state = await session.get(TranslationStateModel, batch.media_asset_id, with_for_update=True)
+            state = await session.get(
+                TranslationStateModel, batch.media_asset_id, with_for_update=True
+            )
             if state is None:
                 raise NotFoundError("Translation state not found")
             if state.policy_version_id != batch.policy_version_id:
                 raise ConflictError("Translation batch belongs to a superseded tone policy")
             validated = validate_translation_items(
-                owned_segment_ids=tuple(UUID(str(value)) for value in batch.owned_segment_ids.get("items", [])),
+                owned_segment_ids=tuple(
+                    UUID(str(value)) for value in batch.owned_segment_ids.get("items", [])
+                ),
                 items=tuple((item.segment_id, item.text) for item in result.items),
             )
             now = datetime.now(UTC)
@@ -802,7 +845,9 @@ class SqlAlchemyTranslationRepository:
                         TranslationRevisionModel.subtitle_segment_id == segment_id
                     )
                 )
-                head = await session.get(SegmentTranslationHeadModel, segment_id, with_for_update=True)
+                head = await session.get(
+                    SegmentTranslationHeadModel, segment_id, with_for_update=True
+                )
                 parent_id = head.translation_revision_id if head is not None else None
                 revision = TranslationRevisionModel(
                     id=new_uuid7(),
@@ -869,7 +914,10 @@ class SqlAlchemyTranslationRepository:
                         TranslationFinding(
                             code="TRANSLATION_RESIDUAL_HAN",
                             segment_id=segment.id,
-                            message="Vietnamese output still contains Han characters; review before approval.",
+                            message=(
+                                "Vietnamese output still contains Han characters; "
+                                "review before approval."
+                            ),
                         )
                     )
             state.findings = {
@@ -939,16 +987,32 @@ class SqlAlchemyTranslationRepository:
                     created_at=datetime.now(UTC),
                 )
             )
-            state.actual_cost_micros += cost_micros
+            new_actual_cost = state.actual_cost_micros + cost_micros
+            ceiling_exceeded = new_actual_cost > state.reserved_cost_micros
+            state.actual_cost_micros = new_actual_cost
             state.updated_at = datetime.now(UTC)
+            if ceiling_exceeded:
+                state.status = TranslationStatus.FAILED
+                state.error_code = "TRANSLATION_BUDGET_CEILING_EXCEEDED"
+                state.version += 1
 
-    async def _reconcile_budget_locked(self, session: object, state: TranslationStateModel, owner_id: UUID) -> None:
+        if ceiling_exceeded:
+            raise QuotaExceededError(
+                "Translation provider usage exceeded the confirmed cost ceiling",
+                code="TRANSLATION_BUDGET_CEILING_EXCEEDED",
+            )
+
+    async def _reconcile_budget_locked(
+        self, session: object, state: TranslationStateModel, owner_id: UUID
+    ) -> None:
         if state.reserved_cost_micros <= 0:
             return
         budget = await session.get(TranslationBudgetAccountModel, owner_id, with_for_update=True)  # type: ignore[attr-defined]
         if budget is None:
             raise RuntimeError("Translation budget account is missing")
-        budget.reserved_cost_micros = max(0, budget.reserved_cost_micros - state.reserved_cost_micros)
+        budget.reserved_cost_micros = max(
+            0, budget.reserved_cost_micros - state.reserved_cost_micros
+        )
         budget.used_cost_micros += state.actual_cost_micros
         budget.updated_at = datetime.now(UTC)
         state.reserved_cost_micros = 0

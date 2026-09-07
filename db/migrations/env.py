@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
+import auto_video_sub_infrastructure.translation_models  # noqa: F401
 from alembic import context
 from auto_video_sub_infrastructure.models import Base
 from auto_video_sub_infrastructure.settings import get_settings
-import auto_video_sub_infrastructure.translation_models  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 

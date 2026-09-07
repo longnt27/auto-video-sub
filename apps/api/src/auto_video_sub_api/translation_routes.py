@@ -107,9 +107,7 @@ async def approve_translation_context(
         expected_version=body.expected_version,
         summary=body.summary,
         entities=(
-            tuple(item.to_domain() for item in body.entities)
-            if body.entities is not None
-            else None
+            tuple(item.to_domain() for item in body.entities) if body.entities is not None else None
         ),
     )
     return TranslationResponse.from_domain(snapshot)

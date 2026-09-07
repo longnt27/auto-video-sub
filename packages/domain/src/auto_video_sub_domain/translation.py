@@ -50,13 +50,19 @@ class ContextEntity:
         if not self.kind.strip() or len(self.kind) > 64:
             raise ValidationError("Context entity kind is invalid", code="CONTEXT_ENTITY_INVALID")
         if not self.source_forms or any(not item.strip() for item in self.source_forms):
-            raise ValidationError("Context entity source forms are required", code="CONTEXT_ENTITY_INVALID")
+            raise ValidationError(
+                "Context entity source forms are required", code="CONTEXT_ENTITY_INVALID"
+            )
         if not 0.0 <= self.confidence <= 1.0:
-            raise ValidationError("Context entity confidence is invalid", code="CONTEXT_CONFIDENCE_INVALID")
+            raise ValidationError(
+                "Context entity confidence is invalid", code="CONTEXT_CONFIDENCE_INVALID"
+            )
         if self.preferred_vietnamese is not None and len(self.preferred_vietnamese.strip()) > 400:
             raise ValidationError("Context rendering is too long", code="CONTEXT_ENTITY_INVALID")
         if self.notes is not None and len(self.notes) > 2000:
-            raise ValidationError("Context entity notes are too long", code="CONTEXT_ENTITY_INVALID")
+            raise ValidationError(
+                "Context entity notes are too long", code="CONTEXT_ENTITY_INVALID"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,7 +88,9 @@ class ContextVersion:
         for entity in self.entities:
             entity.validate()
             if entity.id in seen:
-                raise ValidationError("Context contains duplicate entity IDs", code="CONTEXT_ENTITY_DUPLICATE")
+                raise ValidationError(
+                    "Context contains duplicate entity IDs", code="CONTEXT_ENTITY_DUPLICATE"
+                )
             seen.add(entity.id)
 
 
@@ -101,11 +109,17 @@ class TranslationPolicyVersion:
 
     def validate(self) -> None:
         if self.version < 1:
-            raise ValidationError("Translation policy version is invalid", code="TRANSLATION_POLICY_INVALID")
+            raise ValidationError(
+                "Translation policy version is invalid", code="TRANSLATION_POLICY_INVALID"
+            )
         if not self.prompt_version or len(self.prompt_checksum) != 64:
-            raise ValidationError("Translation prompt metadata is invalid", code="TRANSLATION_POLICY_INVALID")
+            raise ValidationError(
+                "Translation prompt metadata is invalid", code="TRANSLATION_POLICY_INVALID"
+            )
         if not self.provider.strip() or not self.model.strip():
-            raise ValidationError("Translation provider/model is required", code="TRANSLATION_PROVIDER_UNCONFIGURED")
+            raise ValidationError(
+                "Translation provider/model is required", code="TRANSLATION_PROVIDER_UNCONFIGURED"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,12 +140,18 @@ class TranslationRevision:
 
     def validate(self) -> None:
         if self.version < 1:
-            raise ValidationError("Translation revision version is invalid", code="TRANSLATION_VERSION_INVALID")
+            raise ValidationError(
+                "Translation revision version is invalid", code="TRANSLATION_VERSION_INVALID"
+            )
         cleaned = self.text.strip()
         if not cleaned:
-            raise ValidationError("Vietnamese translation cannot be empty", code="TRANSLATION_TEXT_EMPTY")
+            raise ValidationError(
+                "Vietnamese translation cannot be empty", code="TRANSLATION_TEXT_EMPTY"
+            )
         if len(cleaned) > 4000:
-            raise ValidationError("Vietnamese translation is too long", code="TRANSLATION_TEXT_TOO_LONG")
+            raise ValidationError(
+                "Vietnamese translation is too long", code="TRANSLATION_TEXT_TOO_LONG"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,7 +179,9 @@ def validate_translation_items(
 ) -> tuple[tuple[UUID, str], ...]:
     expected = set(owned_segment_ids)
     if not expected:
-        raise ValidationError("Translation batch has no owned segments", code="TRANSLATION_BATCH_EMPTY")
+        raise ValidationError(
+            "Translation batch has no owned segments", code="TRANSLATION_BATCH_EMPTY"
+        )
 
     seen: set[UUID] = set()
     normalized: list[tuple[UUID, str]] = []
@@ -204,9 +226,13 @@ def plan_translation_batches(
     overlap_segments: int = 2,
 ) -> tuple[TranslationBatchPlan, ...]:
     if max_owned_segments < 1 or max_owned_segments > 200:
-        raise ValidationError("Translation batch size is invalid", code="TRANSLATION_BATCH_POLICY_INVALID")
+        raise ValidationError(
+            "Translation batch size is invalid", code="TRANSLATION_BATCH_POLICY_INVALID"
+        )
     if max_span_us <= 0 or overlap_segments < 0 or overlap_segments > 10:
-        raise ValidationError("Translation batch timing policy is invalid", code="TRANSLATION_BATCH_POLICY_INVALID")
+        raise ValidationError(
+            "Translation batch timing policy is invalid", code="TRANSLATION_BATCH_POLICY_INVALID"
+        )
     if not segments:
         return ()
 
@@ -226,7 +252,9 @@ def plan_translation_batches(
             end = start + 1
         owned = tuple(item[0] for item in segments[start:end])
         before = tuple(item[0] for item in segments[max(0, start - overlap_segments) : start])
-        after = tuple(item[0] for item in segments[end : min(len(segments), end + overlap_segments)])
+        after = tuple(
+            item[0] for item in segments[end : min(len(segments), end + overlap_segments)]
+        )
         plans.append(
             TranslationBatchPlan(
                 ordinal=ordinal,

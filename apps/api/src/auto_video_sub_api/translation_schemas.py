@@ -70,9 +70,7 @@ class ContextEntityInput(BaseModel):
             kind=self.kind.strip(),
             source_forms=tuple(item.strip() for item in self.source_forms),
             preferred_vietnamese=(
-                self.preferred_vietnamese.strip()
-                if self.preferred_vietnamese is not None
-                else None
+                self.preferred_vietnamese.strip() if self.preferred_vietnamese is not None else None
             ),
             confidence=self.confidence,
             ambiguous=self.ambiguous,

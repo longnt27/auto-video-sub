@@ -161,7 +161,9 @@ class TranslationProvider(Protocol):
 
     async def extract_context(self, request: ContextExtractionRequest) -> ContextProviderResult: ...
 
-    async def translate_batch(self, request: TranslationBatchRequest) -> TranslationProviderResult: ...
+    async def translate_batch(
+        self, request: TranslationBatchRequest
+    ) -> TranslationProviderResult: ...
 
 
 class TranslationRepository(Protocol):
@@ -246,9 +248,13 @@ class TranslationWorkflowControl(Protocol):
         self, *, media_asset_id: UUID, policy_version_id: UUID
     ) -> None: ...
 
-    async def approve_translation(self, *, media_asset_id: UUID, policy_version_id: UUID) -> None: ...
+    async def approve_translation(
+        self, *, media_asset_id: UUID, policy_version_id: UUID
+    ) -> None: ...
 
-    async def cancel_translation(self, *, media_asset_id: UUID, policy_version_id: UUID) -> None: ...
+    async def cancel_translation(
+        self, *, media_asset_id: UUID, policy_version_id: UUID
+    ) -> None: ...
 
 
 class TranslationWorkflowRepository(Protocol):
@@ -288,7 +294,9 @@ class TranslationWorkflowRepository(Protocol):
         prompt_version: str,
     ) -> None: ...
 
-    async def finalize_translation(self, media_asset_id: UUID) -> tuple[TranslationFinding, ...]: ...
+    async def finalize_translation(
+        self, media_asset_id: UUID
+    ) -> tuple[TranslationFinding, ...]: ...
 
     async def set_translation_status(
         self,

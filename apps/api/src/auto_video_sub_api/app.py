@@ -134,10 +134,13 @@ def create_app(
                     resolved_settings.translation_output_cost_micros_per_million_tokens
                 ),
             )
-        resolved_translation_workflows = translation_workflows or TemporalTranslationWorkflowControl(
-            address=resolved_settings.temporal_address,
-            namespace=resolved_settings.temporal_namespace,
-            task_queue=resolved_settings.temporal_translation_task_queue,
+        resolved_translation_workflows = (
+            translation_workflows
+            or TemporalTranslationWorkflowControl(
+                address=resolved_settings.temporal_address,
+                namespace=resolved_settings.temporal_namespace,
+                task_queue=resolved_settings.temporal_translation_task_queue,
+            )
         )
 
         app.state.repository = resolved_repository

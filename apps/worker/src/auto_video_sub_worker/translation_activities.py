@@ -123,7 +123,9 @@ class TranslationActivities:
                 non_retryable=True,
             )
         source = await self._repository.load_source_segments_internal(media_asset_id)
-        plans = plan_translation_batches(tuple((item.id, item.start_us, item.end_us) for item in source))
+        plans = plan_translation_batches(
+            tuple((item.id, item.start_us, item.end_us) for item in source)
+        )
         batches = await self._repository.create_batches(media_asset_id=media_asset_id, plans=plans)
         return [str(item.id) for item in batches]
 
@@ -149,7 +151,10 @@ class TranslationActivities:
                 non_retryable=True,
             )
         definition = TONE_POLICIES[policy.preset]
-        if definition.prompt_version != policy.prompt_version or definition.checksum != policy.prompt_checksum:
+        if (
+            definition.prompt_version != policy.prompt_version
+            or definition.checksum != policy.prompt_checksum
+        ):
             raise ApplicationError(
                 "Pinned translation prompt does not match the current server catalog",
                 type="TRANSLATION_PROMPT_VERSION_MISMATCH",

@@ -28,7 +28,9 @@ def upgrade() -> None:
         sa.Column("used_cost_micros", sa.BigInteger(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("max_cost_micros >= 0", name="ck_translation_budget_max_nonnegative"),
-        sa.CheckConstraint("reserved_cost_micros >= 0", name="ck_translation_budget_reserved_nonnegative"),
+        sa.CheckConstraint(
+            "reserved_cost_micros >= 0", name="ck_translation_budget_reserved_nonnegative"
+        ),
         sa.CheckConstraint("used_cost_micros >= 0", name="ck_translation_budget_used_nonnegative"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("user_id"),
@@ -50,7 +52,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("project_id", "version", name="uq_translation_policy_project_version"),
     )
-    op.create_index("ix_translation_policy_project_created", "translation_policy_versions", ["project_id", "created_at"], unique=False)
+    op.create_index(
+        "ix_translation_policy_project_created",
+        "translation_policy_versions",
+        ["project_id", "created_at"],
+        unique=False,
+    )
     op.create_table(
         "context_versions",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -65,12 +72,19 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["media_asset_id"], ["media_assets.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["parent_version_id"], ["context_versions.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["parent_version_id"], ["context_versions.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("media_asset_id", "version", name="uq_context_media_version"),
     )
-    op.create_index("ix_context_media_created", "context_versions", ["media_asset_id", "created_at"], unique=False)
+    op.create_index(
+        "ix_context_media_created",
+        "context_versions",
+        ["media_asset_id", "created_at"],
+        unique=False,
+    )
     op.create_table(
         "context_entities",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -82,10 +96,14 @@ def upgrade() -> None:
         sa.Column("ambiguous", sa.Boolean(), nullable=False),
         sa.Column("notes", sa.String(length=2000), nullable=True),
         sa.Column("evidence_segment_ids", JSON_VALUE, nullable=False),
-        sa.ForeignKeyConstraint(["context_version_id"], ["context_versions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["context_version_id"], ["context_versions.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_context_entity_version", "context_entities", ["context_version_id"], unique=False)
+    op.create_index(
+        "ix_context_entity_version", "context_entities", ["context_version_id"], unique=False
+    )
     op.create_table(
         "translation_states",
         sa.Column("media_asset_id", sa.Uuid(), nullable=False),
@@ -103,13 +121,22 @@ def upgrade() -> None:
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["context_version_id"], ["context_versions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["context_version_id"], ["context_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["media_asset_id"], ["media_assets.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("media_asset_id"),
     )
-    op.create_index("ix_translation_project_updated", "translation_states", ["project_id", "updated_at"], unique=False)
+    op.create_index(
+        "ix_translation_project_updated",
+        "translation_states",
+        ["project_id", "updated_at"],
+        unique=False,
+    )
     op.create_table(
         "translation_batches",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -123,14 +150,25 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["context_version_id"], ["context_versions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["context_version_id"], ["context_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["media_asset_id"], ["media_assets.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("policy_version_id", "ordinal", name="uq_translation_batch_policy_ordinal"),
+        sa.UniqueConstraint(
+            "policy_version_id", "ordinal", name="uq_translation_batch_policy_ordinal"
+        ),
     )
-    op.create_index("ix_translation_batch_media", "translation_batches", ["media_asset_id", "ordinal"], unique=False)
+    op.create_index(
+        "ix_translation_batch_media",
+        "translation_batches",
+        ["media_asset_id", "ordinal"],
+        unique=False,
+    )
     op.create_table(
         "translation_revisions",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -146,23 +184,42 @@ def upgrade() -> None:
         sa.Column("editor_id", sa.Uuid(), nullable=True),
         sa.Column("parent_revision_id", sa.Uuid(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["context_version_id"], ["context_versions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["context_version_id"], ["context_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["editor_id"], ["users.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["parent_revision_id"], ["translation_revisions.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["parent_revision_id"], ["translation_revisions.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("subtitle_segment_id", "version", name="uq_translation_revision_version"),
+        sa.UniqueConstraint(
+            "subtitle_segment_id", "version", name="uq_translation_revision_version"
+        ),
     )
-    op.create_index("ix_translation_revision_segment_created", "translation_revisions", ["subtitle_segment_id", "created_at"], unique=False)
+    op.create_index(
+        "ix_translation_revision_segment_created",
+        "translation_revisions",
+        ["subtitle_segment_id", "created_at"],
+        unique=False,
+    )
     op.create_table(
         "segment_translation_heads",
         sa.Column("subtitle_segment_id", sa.Uuid(), nullable=False),
         sa.Column("translation_revision_id", sa.Uuid(), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["translation_revision_id"], ["translation_revisions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["subtitle_segment_id"], ["subtitle_segments.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["translation_revision_id"], ["translation_revisions.id"], ondelete="RESTRICT"
+        ),
         sa.PrimaryKeyConstraint("subtitle_segment_id"),
     )
     op.create_table(
@@ -180,11 +237,18 @@ def upgrade() -> None:
         sa.Column("provider_request_id", sa.String(length=255), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["media_asset_id"], ["media_assets.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["policy_version_id"], ["translation_policy_versions.id"], ondelete="RESTRICT"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_translation_usage_media_created", "translation_usage", ["media_asset_id", "created_at"], unique=False)
+    op.create_index(
+        "ix_translation_usage_media_created",
+        "translation_usage",
+        ["media_asset_id", "created_at"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:

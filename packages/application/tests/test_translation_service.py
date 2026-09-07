@@ -2,7 +2,6 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-
 from auto_video_sub_application.translation import TranslationService
 from auto_video_sub_domain import (
     SourceRevision,
