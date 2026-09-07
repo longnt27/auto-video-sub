@@ -193,3 +193,103 @@ class StageExecutionModel(Base):
     retryable: Mapped[bool | None] = mapped_column(nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class TranscriptStateModel(Base):
+    __tablename__ = "transcript_states"
+    __table_args__ = (Index("ix_transcript_project_updated", "project_id", "updated_at"),)
+
+    media_asset_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("media_assets.id", ondelete="CASCADE"), primary_key=True
+    )
+    project_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32))
+    region_config: Mapped[dict[str, Any]] = mapped_column()
+    workflow_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(96), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class OcrObservationModel(Base):
+    __tablename__ = "ocr_observations"
+    __table_args__ = (
+        Index("ix_ocr_media_time", "media_asset_id", "time_us"),
+        CheckConstraint("time_us >= 0", name="ck_ocr_time_nonnegative"),
+        CheckConstraint(
+            "confidence_ppm >= 0 AND confidence_ppm <= 1000000",
+            name="ck_ocr_confidence_range",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    media_asset_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("media_assets.id", ondelete="CASCADE"), nullable=False
+    )
+    time_us: Mapped[int] = mapped_column(BigInteger)
+    text: Mapped[str] = mapped_column(String(2000))
+    confidence_ppm: Mapped[int] = mapped_column(Integer)
+    provider: Mapped[str] = mapped_column(String(96))
+    model_version: Mapped[str] = mapped_column(String(160))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class SubtitleSegmentModel(Base):
+    __tablename__ = "subtitle_segments"
+    __table_args__ = (
+        UniqueConstraint("media_asset_id", "ordinal", name="uq_segment_media_ordinal"),
+        Index("ix_segment_project_media", "project_id", "media_asset_id", "ordinal"),
+        CheckConstraint("ordinal >= 0", name="ck_segment_ordinal_nonnegative"),
+        CheckConstraint("start_us >= 0", name="ck_segment_start_nonnegative"),
+        CheckConstraint("end_us > start_us", name="ck_segment_timing_valid"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    project_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    media_asset_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("media_assets.id", ondelete="CASCADE"), nullable=False
+    )
+    ordinal: Mapped[int] = mapped_column(Integer)
+    start_us: Mapped[int] = mapped_column(BigInteger)
+    end_us: Mapped[int] = mapped_column(BigInteger)
+    current_source_revision_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class SourceRevisionModel(Base):
+    __tablename__ = "source_revisions"
+    __table_args__ = (
+        UniqueConstraint("subtitle_segment_id", "version", name="uq_source_revision_version"),
+        Index("ix_source_revision_segment_created", "subtitle_segment_id", "created_at"),
+        CheckConstraint("version > 0", name="ck_source_revision_version_positive"),
+        CheckConstraint(
+            "confidence_ppm IS NULL OR (confidence_ppm >= 0 AND confidence_ppm <= 1000000)",
+            name="ck_source_revision_confidence_range",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    subtitle_segment_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("subtitle_segments.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(String(4000))
+    origin: Mapped[str] = mapped_column(String(32))
+    confidence_ppm: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    editor_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    parent_revision_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("source_revisions.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
