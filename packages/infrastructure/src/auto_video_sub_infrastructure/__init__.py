@@ -1,6 +1,7 @@
 """Infrastructure adapters and configuration."""
 
 # Import table mappings so Base.metadata always represents the full schema.
+from auto_video_sub_infrastructure import speech_models as _speech_models  # noqa: F401
 from auto_video_sub_infrastructure import (
     subtitle_style_models as _subtitle_style_models,  # noqa: F401
 )
@@ -9,6 +10,8 @@ from auto_video_sub_infrastructure.database import SessionProvider, create_engin
 from auto_video_sub_infrastructure.probes import build_dependency_probes
 from auto_video_sub_infrastructure.repository import SqlAlchemyProductRepository
 from auto_video_sub_infrastructure.settings import Settings, get_settings
+from auto_video_sub_infrastructure.speech_repository import SqlAlchemySpeechRepository
+from auto_video_sub_infrastructure.speech_workflows import TemporalSpeechWorkflowControl
 from auto_video_sub_infrastructure.storage import S3ObjectStorage
 from auto_video_sub_infrastructure.subtitle_style_repository import (
     SqlAlchemySubtitleStyleRepository,
@@ -23,9 +26,11 @@ __all__ = [
     "SessionProvider",
     "Settings",
     "SqlAlchemyProductRepository",
+    "SqlAlchemySpeechRepository",
     "SqlAlchemySubtitleStyleRepository",
     "SqlAlchemyTranscriptRepository",
     "SqlAlchemyTranslationRepository",
+    "TemporalSpeechWorkflowControl",
     "TemporalTranslationWorkflowControl",
     "TemporalWorkflowStarter",
     "build_dependency_probes",
