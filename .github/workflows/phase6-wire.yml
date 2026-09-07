@@ -23,11 +23,22 @@ jobs:
           version: 0.11.3
       - name: Apply repository wiring
         run: python scripts/phase6_wire.py
+      - name: Neutralize ASS control literals
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("packages/providers/src/auto_video_sub_providers/render.py")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace('text.replace("\\\\", "＼")', 'text.replace("\\\\", chr(0xFF3C))')
+          text = text.replace('.replace("{", "｛")', '.replace("{", chr(0xFF5B))')
+          text = text.replace('.replace("}", "｝")', '.replace("}", chr(0xFF5D))')
+          path.write_text(text, encoding="utf-8")
+          PY
       - name: Format Python
         run: |
           uv sync --all-packages --all-groups --frozen
-          uv run ruff format .
-          uv run ruff check --fix .
+          uv run ruff format . --exclude scripts/phase6_wire.py
+          uv run ruff check --fix . --exclude scripts/phase6_wire.py
       - name: Commit wiring and remove helper
         run: |
           rm scripts/phase6_wire.py .github/workflows/phase6-wire.yml
