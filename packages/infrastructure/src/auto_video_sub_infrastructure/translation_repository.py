@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from auto_video_sub_application.translation_ports import (
@@ -123,8 +124,8 @@ class SqlAlchemyTranslationRepository:
 
     async def _owned_state(
         self, session: object, owner_id: UUID, project_id: UUID, media_asset_id: UUID
-    ):
-        return await session.scalar(  # type: ignore[attr-defined]
+    ) -> TranslationStateModel | None:
+        result = await session.scalar(  # type: ignore[attr-defined]
             select(TranslationStateModel)
             .join(ProjectModel, ProjectModel.id == TranslationStateModel.project_id)
             .where(
@@ -133,6 +134,7 @@ class SqlAlchemyTranslationRepository:
                 ProjectModel.owner_id == owner_id,
             )
         )
+        return cast(TranslationStateModel | None, result)
 
     async def _source_segments(
         self, session: object, media_asset_id: UUID
@@ -668,10 +670,10 @@ class SqlAlchemyTranslationRepository:
                 }
                 and state.context_version_id is not None
             ):
-                context = await self._context(session, state.context_version_id)
-                if context is None:
+                existing_context = await self._context(session, state.context_version_id)
+                if existing_context is None:
                     raise RuntimeError("Translation context is missing")
-                return context
+                return existing_context
             if TranslationStatus(state.status) is not TranslationStatus.CONTEXT_PROCESSING:
                 raise ConflictError("Translation context processing is no longer active")
             latest_version = await session.scalar(
@@ -680,7 +682,7 @@ class SqlAlchemyTranslationRepository:
                 )
             )
             now = datetime.now(UTC)
-            context = ContextVersionModel(
+            context_row = ContextVersionModel(
                 id=new_uuid7(),
                 project_id=state.project_id,
                 media_asset_id=media_asset_id,
@@ -692,13 +694,13 @@ class SqlAlchemyTranslationRepository:
                 created_by=None,
                 created_at=now,
             )
-            session.add(context)
+            session.add(context_row)
             await session.flush()
             for item in result.entities:
                 session.add(
                     ContextEntityModel(
                         id=new_uuid7(),
-                        context_version_id=context.id,
+                        context_version_id=context_row.id,
                         kind=item.kind,
                         source_forms={"items": list(item.source_forms)},
                         preferred_vietnamese=item.preferred_vietnamese,
@@ -714,7 +716,7 @@ class SqlAlchemyTranslationRepository:
                 session.add(
                     ContextEntityModel(
                         id=new_uuid7(),
-                        context_version_id=context.id,
+                        context_version_id=context_row.id,
                         kind="ambiguity",
                         source_forms={"items": [question]},
                         preferred_vietnamese=None,
@@ -724,12 +726,12 @@ class SqlAlchemyTranslationRepository:
                         evidence_segment_ids={"items": []},
                     )
                 )
-            state.context_version_id = context.id
+            state.context_version_id = context_row.id
             state.status = TranslationStatus.WAITING_FOR_CONTEXT_REVIEW
             state.version += 1
             state.updated_at = now
             await session.flush()
-            published = await self._context(session, context.id)
+            published = await self._context(session, context_row.id)
             if published is None:
                 raise RuntimeError("Translation context was not persisted")
             return published
