@@ -1,31 +1,60 @@
-name: Phase 3 lockfile helper
+name: Phase 3 finalize helper
 
 on:
   pull_request:
     paths:
+      - "**/*.py"
+      - "apps/web/**"
       - "packages/providers/pyproject.toml"
       - "uv.lock"
       - ".github/workflows/phase3-lockfile.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  generate-lockfile:
+  finalize:
+    if: github.event.pull_request.head.ref == 'dev/source-transcript'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: astral-sh/setup-uv@v7
         with:
           version: 0.11.3
-      - name: Regenerate workspace lockfile
-        run: uv lock
-      - name: Verify frozen install from generated lockfile
-        run: uv sync --all-packages --all-groups --frozen
-      - uses: actions/upload-artifact@v4
+      - uses: pnpm/action-setup@v5
         with:
-          name: phase3-uv-lock
-          path: uv.lock
-          if-no-files-found: error
-          retention-days: 1
+          version: 11.15.1
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Generate and verify Python lockfile
+        run: |
+          uv lock
+          uv sync --all-packages --all-groups --frozen
+      - name: Apply Python formatting and safe lint fixes
+        run: |
+          uv run ruff format .
+          uv run ruff check --fix .
+      - name: Apply web formatting
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm format
+      - name: Remove one-shot helper and commit fixes
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          rm .github/workflows/phase3-lockfile.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No finalization changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: finalize phase 3 quality fixes"
+          git push origin "HEAD:${HEAD_BRANCH}"
