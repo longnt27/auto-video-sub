@@ -62,4 +62,4 @@ No ordinary Phase 3 test invokes the paid translation provider.
 
 ## Exit verification
 
-The final Phase 3 branch head must pass the normal repository CI: frozen dependency installs, Python format/lint/type/tests plus PostgreSQL/Garage/migration integration, web format/lint/type/tests/build, and Compose validation.
+The final Phase 3 branch head must pass normal repository CI: frozen dependency installs, Python format/lint/type/tests plus PostgreSQL/Garage/migration integration, web format/lint/type/tests/build, and Compose validation.
