@@ -27,6 +27,30 @@ type UploadIntent = {
   };
 };
 
+type SubtitleSegment = {
+  id: string;
+  ordinal: number;
+  start_us: number;
+  end_us: number;
+  version: number;
+  source: {
+    id: string;
+    version: number;
+    text: string;
+    origin: string;
+    confidence: number | null;
+  };
+};
+
+type Transcript = {
+  project_id: string;
+  media_asset_id: string;
+  status: string;
+  version: number;
+  error_code: string | null;
+  segments: SubtitleSegment[];
+};
+
 const API = "/api/backend/v1";
 const ACCEPTED_MEDIA_TYPES = new Set([
   "video/mp4",
@@ -58,12 +82,22 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+function formatTime(timeUs: number): string {
+  const totalSeconds = timeUs / 1_000_000;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds - minutes * 60;
+  return `${minutes}:${seconds.toFixed(2).padStart(5, "0")}`;
+}
+
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [title, setTitle] = useState("");
   const [media, setMedia] = useState<Media | null>(null);
+  const [transcript, setTranscript] = useState<Transcript | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [message, setMessage] = useState("Ready for a tailnet-only upload.");
 
   const refreshProjects = useCallback(async () => {
@@ -74,6 +108,13 @@ export default function Home() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load projects");
     }
+  }, []);
+
+  const applyTranscript = useCallback((next: Transcript) => {
+    setTranscript(next);
+    setDrafts(
+      Object.fromEntries(next.segments.map((segment) => [segment.id, segment.source.text])),
+    );
   }, []);
 
   useEffect(() => {
@@ -89,7 +130,9 @@ export default function Home() {
         const next = await api<Media>(`/projects/${media.project_id}/media/${media.id}`);
         setMedia(next);
         setMessage(
-          next.status === "ready" ? "Proxy ready for review." : `Processing: ${next.status}`,
+          next.status === "ready"
+            ? "Proxy ready. Start source transcript extraction."
+            : `Processing: ${next.status}`,
         );
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Status refresh failed");
@@ -97,6 +140,26 @@ export default function Home() {
     }, 2000);
     return () => window.clearInterval(timer);
   }, [media]);
+
+  useEffect(() => {
+    if (!media || transcript?.status !== "processing") return;
+    const timer = window.setInterval(async () => {
+      try {
+        const next = await api<Transcript>(
+          `/projects/${media.project_id}/media/${media.id}/transcript`,
+        );
+        applyTranscript(next);
+        setMessage(
+          next.status === "waiting_for_review"
+            ? "OCR complete. Review and correct the Chinese transcript."
+            : `Transcript processing: ${next.status}`,
+        );
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Transcript refresh failed");
+      }
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [applyTranscript, media, transcript?.status]);
 
   async function createProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,6 +189,8 @@ export default function Home() {
     }
     setBusy(true);
     setMedia(null);
+    setTranscript(null);
+    setDrafts({});
     try {
       const contentType = mediaContentType(file);
       setMessage("Creating a scoped upload intent…");
@@ -154,6 +219,108 @@ export default function Home() {
       setMessage(error instanceof Error ? error.message : "Upload failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function startTranscript() {
+    if (!media || media.status !== "ready") return;
+    setTranscriptBusy(true);
+    try {
+      const next = await api<Transcript>(
+        `/projects/${media.project_id}/media/${media.id}/transcript/start`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      );
+      applyTranscript(next);
+      setMessage("Extracting the configured bottom subtitle band and running local OCR…");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Transcript start failed");
+    } finally {
+      setTranscriptBusy(false);
+    }
+  }
+
+  async function saveSegment(segment: SubtitleSegment) {
+    if (!media) return;
+    const text = drafts[segment.id]?.trim();
+    if (!text || text === segment.source.text) return;
+    setTranscriptBusy(true);
+    try {
+      await api<SubtitleSegment>(
+        `/projects/${media.project_id}/media/${media.id}/transcript/segments/${segment.id}/revisions`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text, expected_version: segment.version }),
+        },
+      );
+      const next = await api<Transcript>(
+        `/projects/${media.project_id}/media/${media.id}/transcript`,
+      );
+      applyTranscript(next);
+      setMessage(`Saved source revision for segment ${segment.ordinal + 1}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Segment save failed");
+    } finally {
+      setTranscriptBusy(false);
+    }
+  }
+
+  async function approveTranscript() {
+    if (!media || !transcript || transcript.status !== "waiting_for_review") return;
+    setTranscriptBusy(true);
+    try {
+      const next = await api<Transcript>(
+        `/projects/${media.project_id}/media/${media.id}/transcript/approve`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ expected_version: transcript.version }),
+        },
+      );
+      applyTranscript(next);
+      setMessage("Source transcript approved. Phase 4 can consume this exact revision set.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Transcript approval failed");
+    } finally {
+      setTranscriptBusy(false);
+    }
+  }
+
+  async function cancelTranscript() {
+    if (!media || !transcript) return;
+    setTranscriptBusy(true);
+    try {
+      const next = await api<Transcript>(
+        `/projects/${media.project_id}/media/${media.id}/transcript/cancel`,
+        { method: "POST" },
+      );
+      applyTranscript(next);
+      setMessage("Transcript processing cancelled safely.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Transcript cancellation failed");
+    } finally {
+      setTranscriptBusy(false);
+    }
+  }
+
+  async function restartTranscript() {
+    if (!media || !transcript) return;
+    setTranscriptBusy(true);
+    try {
+      const next = await api<Transcript>(
+        `/projects/${media.project_id}/media/${media.id}/transcript/restart`,
+        { method: "POST" },
+      );
+      applyTranscript(next);
+      setMessage("Transcript processing restarted from reusable durable inputs.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Transcript restart failed");
+    } finally {
+      setTranscriptBusy(false);
     }
   }
 
@@ -217,6 +384,42 @@ export default function Home() {
               />
             </label>
           </div>
+
+          <div>
+            <p className="step">04 · Source transcript</p>
+            <p className="control-copy">
+              Sample the lower subtitle band, run local Chinese OCR, then review stable timestamped
+              segments before translation.
+            </p>
+            {!transcript && (
+              <button
+                type="button"
+                disabled={transcriptBusy || media?.status !== "ready"}
+                onClick={() => void startTranscript()}
+              >
+                Extract transcript
+              </button>
+            )}
+            {transcript?.status === "processing" && (
+              <button type="button" disabled={transcriptBusy} onClick={() => void cancelTranscript()}>
+                Cancel processing
+              </button>
+            )}
+            {transcript && ["failed", "cancelled"].includes(transcript.status) && (
+              <button type="button" disabled={transcriptBusy} onClick={() => void restartTranscript()}>
+                Restart transcript
+              </button>
+            )}
+            {transcript?.status === "waiting_for_review" && (
+              <button
+                type="button"
+                disabled={transcriptBusy}
+                onClick={() => void approveTranscript()}
+              >
+                Approve transcript
+              </button>
+            )}
+          </div>
         </aside>
 
         <section className="panel preview" aria-live="polite">
@@ -234,7 +437,7 @@ export default function Home() {
                   kind="captions"
                   src="/empty.vtt"
                   srcLang="zh"
-                  label="Source captions pending"
+                  label="Source transcript review"
                 />
               </video>
             ) : (
@@ -245,6 +448,78 @@ export default function Home() {
             {media?.error_code ? `${message} (${media.error_code})` : message}
           </p>
         </section>
+      </section>
+
+      <section className="panel transcript-panel" aria-label="Source transcript editor">
+        <div className="preview-heading">
+          <div>
+            <p className="step">05 · Review</p>
+            <h2>Chinese source transcript</h2>
+          </div>
+          <span className={`badge ${transcript?.status ?? "idle"}`}>
+            {transcript?.status ?? "not started"}
+          </span>
+        </div>
+
+        {!transcript && (
+          <p className="empty-copy">
+            Once the proxy is ready, extract the source transcript. OCR output stays editable and
+            every correction creates a new immutable revision.
+          </p>
+        )}
+
+        {transcript && transcript.segments.length === 0 && (
+          <p className="empty-copy">
+            {transcript.status === "processing"
+              ? "OCR is still processing sampled subtitle frames."
+              : "No subtitle text was detected in the configured region."}
+          </p>
+        )}
+
+        <div className="segment-list">
+          {transcript?.segments.map((segment) => (
+            <article className="segment-row" key={segment.id}>
+              <div className="segment-time">
+                <strong>#{segment.ordinal + 1}</strong>
+                <span>
+                  {formatTime(segment.start_us)} → {formatTime(segment.end_us)}
+                </span>
+                <small>
+                  {segment.source.origin}
+                  {segment.source.confidence === null
+                    ? ""
+                    : ` · ${(segment.source.confidence * 100).toFixed(0)}%`}
+                </small>
+              </div>
+              <textarea
+                aria-label={`Source segment ${segment.ordinal + 1}`}
+                value={drafts[segment.id] ?? segment.source.text}
+                disabled={transcript.status !== "waiting_for_review" || transcriptBusy}
+                onChange={(event) =>
+                  setDrafts((current) => ({ ...current, [segment.id]: event.target.value }))
+                }
+                rows={2}
+                maxLength={4000}
+              />
+              <button
+                type="button"
+                className="secondary"
+                disabled={
+                  transcript.status !== "waiting_for_review" ||
+                  transcriptBusy ||
+                  !drafts[segment.id]?.trim() ||
+                  drafts[segment.id]?.trim() === segment.source.text
+                }
+                onClick={() => void saveSegment(segment)}
+              >
+                Save correction
+              </button>
+            </article>
+          ))}
+        </div>
+        {transcript?.error_code && (
+          <p className="status-line">Transcript error: {transcript.error_code}</p>
+        )}
       </section>
     </main>
   );
