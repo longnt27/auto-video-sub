@@ -7,8 +7,8 @@ from uuid import UUID
 from auto_video_sub_domain.errors import ValidationError
 from auto_video_sub_domain.rendering import OriginalAudioPolicy, RenderStatus
 
+from auto_video_sub_application.ports import ObjectStorage
 from auto_video_sub_application.render_ports import (
-    RenderObjectStorage,
     RenderRepository,
     RenderSnapshot,
     RenderWorkflowControl,
@@ -23,7 +23,7 @@ class RenderService:
         *,
         repository: RenderRepository,
         workflows: RenderWorkflowControl,
-        storage: RenderObjectStorage,
+        storage: ObjectStorage,
         renderer_version: str,
         font_filename: str,
         font_checksum_sha256: str,
