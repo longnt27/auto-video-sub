@@ -6,8 +6,8 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-from auto_video_sub_application.ports import MediaProcessError
-from auto_video_sub_domain import MediaProbe, ValidationError
+from auto_video_sub_application.ports import ExtractedSubtitleFrame, MediaProcessError
+from auto_video_sub_domain import MediaProbe, SubtitleRegion, ValidationError
 
 
 class FFmpegMediaProcessor:
@@ -127,6 +127,51 @@ class FFmpegMediaProcessor:
                 code="MEDIA_PROXY_EMPTY",
                 retryable=False,
             )
+
+    async def extract_subtitle_frames(
+        self, source: Path, destination: Path, region: SubtitleRegion
+    ) -> list[ExtractedSubtitleFrame]:
+        region.validate()
+        destination.mkdir(parents=True, exist_ok=True)
+        width = region.x_end_ratio - region.x_start_ratio
+        height = region.y_end_ratio - region.y_start_ratio
+        filter_graph = (
+            f"fps=1000/{region.sample_interval_ms},"
+            f"crop=iw*{width:.8f}:ih*{height:.8f}:"
+            f"iw*{region.x_start_ratio:.8f}:ih*{region.y_start_ratio:.8f}"
+        )
+        pattern = destination / "frame-%08d.jpg"
+        command = (
+            self._ffmpeg_path,
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(source),
+            "-map",
+            "0:v:0",
+            "-an",
+            "-vf",
+            filter_graph,
+            "-q:v",
+            "4",
+            "-y",
+            str(pattern),
+        )
+        await self._run(
+            command,
+            timeout_seconds=self._proxy_timeout,
+            code="MEDIA_SUBTITLE_EXTRACTION_FAILED",
+        )
+        paths = sorted(destination.glob("frame-*.jpg"))
+        return [
+            ExtractedSubtitleFrame(
+                time_us=index * region.sample_interval_ms * 1000,
+                path=path,
+            )
+            for index, path in enumerate(paths)
+        ]
 
     @staticmethod
     async def _terminate(process: asyncio.subprocess.Process) -> None:
