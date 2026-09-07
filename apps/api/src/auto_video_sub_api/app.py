@@ -13,6 +13,8 @@ from auto_video_sub_application import (
     DependencyProbe,
     IdentityService,
     ProjectService,
+    SubtitleStyleRepository,
+    SubtitleStyleService,
     TranscriptService,
     TranslationService,
     UploadService,
@@ -35,6 +37,7 @@ from auto_video_sub_infrastructure import (
     SessionProvider,
     Settings,
     SqlAlchemyProductRepository,
+    SqlAlchemySubtitleStyleRepository,
     SqlAlchemyTranscriptRepository,
     SqlAlchemyTranslationRepository,
     TemporalTranslationWorkflowControl,
@@ -50,6 +53,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from auto_video_sub_api.routes import router
+from auto_video_sub_api.subtitle_style_routes import router as subtitle_style_router
 from auto_video_sub_api.translation_routes import router as translation_router
 
 LOGGER = logging.getLogger(__name__)
@@ -72,6 +76,7 @@ def create_app(
     transcript_workflows: TranscriptWorkflowControl | None = None,
     translation_repository: TranslationRepository | None = None,
     translation_workflows: TranslationWorkflowControl | None = None,
+    subtitle_style_repository: SubtitleStyleRepository | None = None,
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
@@ -142,6 +147,9 @@ def create_app(
                 task_queue=resolved_settings.temporal_translation_task_queue,
             )
         )
+        resolved_subtitle_style_repository = subtitle_style_repository
+        if resolved_subtitle_style_repository is None and sessions is not None:
+            resolved_subtitle_style_repository = SqlAlchemySubtitleStyleRepository(sessions)
 
         app.state.repository = resolved_repository
         app.state.identity_service = IdentityService(resolved_repository)
@@ -185,6 +193,11 @@ def create_app(
                 ),
             )
             if resolved_translation_repository is not None
+            else None
+        )
+        app.state.subtitle_style_service = (
+            SubtitleStyleService(resolved_subtitle_style_repository)
+            if resolved_subtitle_style_repository is not None
             else None
         )
         try:
@@ -307,4 +320,5 @@ def create_app(
 
     application.include_router(router)
     application.include_router(translation_router)
+    application.include_router(subtitle_style_router)
     return application
