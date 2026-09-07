@@ -1,0 +1,54 @@
+name: Phase 5 cleanup
+
+on:
+  push:
+    branches: [dev/vietnamese-speech]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase5-cleanup
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: 0.11.3
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 11.15.1
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Regenerate Python lock and format Python
+        run: |
+          uv lock
+          uv sync --all-packages --all-groups --frozen
+          uv run ruff format .
+          uv run ruff check --fix .
+          uv run ruff check .
+      - name: Format web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm format
+          pnpm lint
+      - name: Remove helper and commit reproducibility outputs
+        run: |
+          rm .github/workflows/phase5-cleanup.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore(speech): refresh locks and formatting"
+          git push
