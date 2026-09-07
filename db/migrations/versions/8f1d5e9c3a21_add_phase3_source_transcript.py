@@ -7,8 +7,9 @@ Create Date: 2026-09-07
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "8f1d5e9c3a21"
 down_revision: str | Sequence[str] | None = "1b105fb342a2"
@@ -22,7 +23,11 @@ def upgrade() -> None:
         sa.Column("media_asset_id", sa.Uuid(), nullable=False),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
-        sa.Column("region_config", sa.JSON(), nullable=False),
+        sa.Column(
+            "region_config",
+            sa.JSON().with_variant(postgresql.JSONB(astext_type=sa.Text()), "postgresql"),
+            nullable=False,
+        ),
         sa.Column("workflow_id", sa.String(length=255), nullable=True),
         sa.Column("error_code", sa.String(length=96), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False),
