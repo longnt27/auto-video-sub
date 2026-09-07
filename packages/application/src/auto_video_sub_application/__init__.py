@@ -13,6 +13,7 @@ from auto_video_sub_application.services import (
     UploadGrant,
     UploadService,
 )
+from auto_video_sub_application.transcript import TranscriptService
 
 __all__ = [
     "DependencyProbe",
@@ -21,6 +22,7 @@ __all__ = [
     "MediaView",
     "ProjectService",
     "ReadinessReport",
+    "TranscriptService",
     "UploadGrant",
     "UploadService",
     "check_readiness",

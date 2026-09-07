@@ -5,6 +5,7 @@ from auto_video_sub_infrastructure.probes import build_dependency_probes
 from auto_video_sub_infrastructure.repository import SqlAlchemyProductRepository
 from auto_video_sub_infrastructure.settings import Settings, get_settings
 from auto_video_sub_infrastructure.storage import S3ObjectStorage
+from auto_video_sub_infrastructure.transcript_repository import SqlAlchemyTranscriptRepository
 from auto_video_sub_infrastructure.workflows import TemporalWorkflowStarter
 
 __all__ = [
@@ -12,6 +13,7 @@ __all__ = [
     "SessionProvider",
     "Settings",
     "SqlAlchemyProductRepository",
+    "SqlAlchemyTranscriptRepository",
     "TemporalWorkflowStarter",
     "build_dependency_probes",
     "create_engine",

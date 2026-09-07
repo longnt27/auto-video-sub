@@ -13,16 +13,24 @@ from auto_video_sub_application import (
     DependencyProbe,
     IdentityService,
     ProjectService,
+    TranscriptService,
     UploadService,
     check_readiness,
 )
-from auto_video_sub_application.ports import ObjectStorage, ProductRepository, WorkflowStarter
+from auto_video_sub_application.ports import (
+    ObjectStorage,
+    ProductRepository,
+    TranscriptRepository,
+    TranscriptWorkflowControl,
+    WorkflowStarter,
+)
 from auto_video_sub_domain import DomainError, MediaLimits
 from auto_video_sub_infrastructure import (
     S3ObjectStorage,
     SessionProvider,
     Settings,
     SqlAlchemyProductRepository,
+    SqlAlchemyTranscriptRepository,
     TemporalWorkflowStarter,
     build_dependency_probes,
     create_engine,
@@ -52,6 +60,8 @@ def create_app(
     repository: ProductRepository | None = None,
     storage: ObjectStorage | None = None,
     workflows: WorkflowStarter | None = None,
+    transcript_repository: TranscriptRepository | None = None,
+    transcript_workflows: TranscriptWorkflowControl | None = None,
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
@@ -61,11 +71,13 @@ def create_app(
         if not hasattr(app.state, "probes"):
             app.state.probes = build_dependency_probes(resolved_settings)
         engine = None
+        sessions = None
         resolved_repository = repository
         if resolved_repository is None:
             engine = create_engine(resolved_settings.database_url)
+            sessions = SessionProvider(engine)
             resolved_repository = SqlAlchemyProductRepository(
-                SessionProvider(engine),
+                sessions,
                 default_max_projects=resolved_settings.default_max_projects,
                 default_max_concurrent_uploads=resolved_settings.default_max_concurrent_uploads,
                 default_max_storage_bytes=resolved_settings.default_max_storage_bytes,
@@ -82,7 +94,22 @@ def create_app(
             address=resolved_settings.temporal_address,
             namespace=resolved_settings.temporal_namespace,
             task_queue=resolved_settings.temporal_media_task_queue,
+            transcript_task_queue=resolved_settings.temporal_local_ai_task_queue,
         )
+        resolved_transcript_repository = transcript_repository
+        if resolved_transcript_repository is None and sessions is not None:
+            if not isinstance(resolved_repository, SqlAlchemyProductRepository):
+                raise RuntimeError("SQL transcript repository requires SQL product repository")
+            resolved_transcript_repository = SqlAlchemyTranscriptRepository(
+                sessions,
+                resolved_repository,
+            )
+        resolved_transcript_workflows = transcript_workflows
+        if resolved_transcript_workflows is None and isinstance(
+            resolved_workflows, TemporalWorkflowStarter
+        ):
+            resolved_transcript_workflows = resolved_workflows
+
         app.state.repository = resolved_repository
         app.state.identity_service = IdentityService(resolved_repository)
         app.state.project_service = ProjectService(resolved_repository)
@@ -101,6 +128,15 @@ def create_app(
             ),
             upload_url_ttl=timedelta(seconds=resolved_settings.upload_url_ttl_seconds),
             download_url_ttl=timedelta(seconds=resolved_settings.download_url_ttl_seconds),
+        )
+        app.state.transcript_service = (
+            TranscriptService(
+                repository=resolved_transcript_repository,
+                workflows=resolved_transcript_workflows,
+            )
+            if resolved_transcript_repository is not None
+            and resolved_transcript_workflows is not None
+            else None
         )
         try:
             yield
@@ -221,5 +257,4 @@ def create_app(
         )
 
     application.include_router(router)
-
     return application

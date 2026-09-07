@@ -3,7 +3,11 @@ name = "auto-video-sub-providers"
 version = "0.1.0"
 description = "Replaceable external provider adapters for Auto Video Sub"
 requires-python = ">=3.12,<3.13"
-dependencies = ["auto-video-sub-application"]
+dependencies = [
+  "auto-video-sub-application",
+  "onnxruntime>=1.28,<2",
+  "rapidocr>=3.9.2,<4",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.3,<0.12"]
