@@ -1,0 +1,43 @@
+name: Phase 6 wiring
+
+on:
+  push:
+    branches: [dev/render-export]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase6-wiring
+  cancel-in-progress: true
+
+jobs:
+  wire:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: 0.11.3
+      - name: Apply repository wiring
+        run: python scripts/phase6_wire.py
+      - name: Format Python
+        run: |
+          uv sync --all-packages --all-groups --frozen
+          uv run ruff format .
+          uv run ruff check --fix .
+      - name: Commit wiring and remove helper
+        run: |
+          rm scripts/phase6_wire.py .github/workflows/phase6-wire.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(render): wire render execution path"
+          git push
+      - name: Verify Python boundaries
+        run: |
+          uv run ruff check .
+          uv run mypy
+          uv run pytest packages/domain/tests packages/application/tests packages/providers/tests apps/worker/tests apps/api/tests
