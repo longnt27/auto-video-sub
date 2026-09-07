@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     default_max_storage_bytes: int = Field(default=4 * 1024**3, gt=0)
 
     temporal_media_task_queue: str = "auto-video-sub-media"
+    temporal_local_ai_task_queue: str = "auto-video-sub-local-ai"
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     media_probe_timeout_seconds: int = Field(default=60, ge=5, le=600)
