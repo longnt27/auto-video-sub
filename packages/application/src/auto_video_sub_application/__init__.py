@@ -13,6 +13,13 @@ from auto_video_sub_application.services import (
     UploadGrant,
     UploadService,
 )
+from auto_video_sub_application.subtitle_style import (
+    DEFAULT_SUBTITLE_STYLE,
+    FONT_CATALOG,
+    SubtitleFontDefinition,
+    SubtitleStyleRepository,
+    SubtitleStyleService,
+)
 from auto_video_sub_application.transcript import TranscriptService
 from auto_video_sub_application.translation import (
     CONTEXT_INSTRUCTIONS,
@@ -25,6 +32,8 @@ from auto_video_sub_application.translation import (
 __all__ = [
     "CONTEXT_INSTRUCTIONS",
     "CONTEXT_PROMPT_VERSION",
+    "DEFAULT_SUBTITLE_STYLE",
+    "FONT_CATALOG",
     "TONE_POLICIES",
     "DependencyProbe",
     "DependencyStatus",
@@ -32,6 +41,9 @@ __all__ = [
     "MediaView",
     "ProjectService",
     "ReadinessReport",
+    "SubtitleFontDefinition",
+    "SubtitleStyleRepository",
+    "SubtitleStyleService",
     "TonePolicyDefinition",
     "TranscriptService",
     "TranslationService",
