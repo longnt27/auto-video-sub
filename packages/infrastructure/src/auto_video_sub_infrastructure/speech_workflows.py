@@ -54,14 +54,24 @@ class TemporalSpeechWorkflowControl:
                 raise
         return workflow_id
 
-    async def approve_speech(self, *, media_asset_id: UUID, speech_version: int) -> None:
+    async def retry_speech_segment(
+        self, *, workflow_id: str, segment_id: UUID, text: str | None
+    ) -> None:
         client = await self._get_client()
-        handle = client.get_workflow_handle(self.workflow_id(media_asset_id, speech_version))
+        handle = client.get_workflow_handle(workflow_id)
+        await handle.signal(
+            "speech-segment-retry-v1",
+            {"segment_id": str(segment_id), "text": text or ""},
+        )
+
+    async def approve_speech(self, *, workflow_id: str) -> None:
+        client = await self._get_client()
+        handle = client.get_workflow_handle(workflow_id)
         await handle.signal("speech-approved-v1")
 
-    async def cancel_speech(self, *, media_asset_id: UUID, speech_version: int) -> None:
+    async def cancel_speech(self, *, workflow_id: str) -> None:
         client = await self._get_client()
-        handle = client.get_workflow_handle(self.workflow_id(media_asset_id, speech_version))
+        handle = client.get_workflow_handle(workflow_id)
         description = await handle.describe()
         if description.status is WorkflowExecutionStatus.RUNNING:
             await handle.cancel()
