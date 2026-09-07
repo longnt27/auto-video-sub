@@ -11,9 +11,9 @@ groups:
       - alert: ApiHighServerErrorRatio
         expr: |
           (
-            sum(rate(auto_video_sub_auto_video_sub_http_requests_total{http_response_status_code=~"5.."}[5m]))
+            sum(rate(auto_video_sub_http_requests_total{http_response_status_code=~"5.."}[5m]))
             /
-            clamp_min(sum(rate(auto_video_sub_auto_video_sub_http_requests_total[5m])), 1)
+            clamp_min(sum(rate(auto_video_sub_http_requests_total[5m])), 1)
           ) > 0.05
         for: 5m
         labels:
