@@ -23,6 +23,8 @@ All routes are under `/v1/projects/{project_id}/media/{media_asset_id}` and use 
 
 Transcript status values are `processing`, `waiting_for_review`, `approved`, `failed`, and `cancelled` after creation. A transcript is editable only while `waiting_for_review`.
 
+The browser always renders the transcript review surface, but per-segment correction controls appear only after OCR has published segments. The initial empty state therefore documents edit/revision behavior without rendering a fake segment editor.
+
 ## Durable workflow
 
 Workflow ID is `source-transcript-v1/{media_asset_id}`. It runs on the local-AI queue and performs:
