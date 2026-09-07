@@ -8,16 +8,28 @@ from uuid import UUID
 
 from auto_video_sub_domain import (
     Artifact,
+    ConsolidatedSegment,
     MediaAsset,
     MediaProbe,
     MediaStatus,
+    OcrObservation,
     Project,
+    SubtitleRegion,
+    SubtitleSegment,
+    TranscriptStatus,
     UploadIntent,
     User,
 )
 
 
 class MediaProcessError(RuntimeError):
+    def __init__(self, message: str, *, code: str, retryable: bool) -> None:
+        super().__init__(message)
+        self.code = code
+        self.retryable = retryable
+
+
+class OcrProviderError(RuntimeError):
     def __init__(self, message: str, *, code: str, retryable: bool) -> None:
         super().__init__(message)
         self.code = code
@@ -37,6 +49,39 @@ class ObjectMetadata:
     byte_size: int
     content_type: str
     etag: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ExtractedSubtitleFrame:
+    time_us: int
+    path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class OcrResult:
+    text: str
+    confidence: float
+    provider: str
+    model_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptRecord:
+    project_id: UUID
+    media_asset_id: UUID
+    status: TranscriptStatus
+    region: SubtitleRegion
+    workflow_id: str | None
+    error_code: str | None
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptSnapshot:
+    record: TranscriptRecord
+    segments: tuple[SubtitleSegment, ...]
 
 
 class ProductRepository(Protocol):
@@ -111,6 +156,111 @@ class ObjectStorage(Protocol):
 
 class WorkflowStarter(Protocol):
     async def start_media_ingest(self, *, project_id: UUID, media_asset_id: UUID) -> str: ...
+
+
+class TranscriptWorkflowControl(Protocol):
+    async def start_source_transcript(
+        self, *, project_id: UUID, media_asset_id: UUID, region: SubtitleRegion
+    ) -> str: ...
+
+    async def approve_source_transcript(self, *, media_asset_id: UUID) -> None: ...
+
+    async def cancel_source_transcript(self, *, media_asset_id: UUID) -> None: ...
+
+
+class TranscriptRepository(Protocol):
+    async def prepare(
+        self,
+        *,
+        owner_id: UUID,
+        project_id: UUID,
+        media_asset_id: UUID,
+        region: SubtitleRegion,
+    ) -> TranscriptRecord: ...
+
+    async def bind_workflow(
+        self,
+        *,
+        owner_id: UUID,
+        project_id: UUID,
+        media_asset_id: UUID,
+        workflow_id: str,
+    ) -> TranscriptRecord: ...
+
+    async def snapshot(
+        self, *, owner_id: UUID, project_id: UUID, media_asset_id: UUID
+    ) -> TranscriptSnapshot: ...
+
+    async def edit_segment(
+        self,
+        *,
+        owner_id: UUID,
+        project_id: UUID,
+        media_asset_id: UUID,
+        segment_id: UUID,
+        text: str,
+        expected_version: int,
+    ) -> SubtitleSegment: ...
+
+    async def approve(
+        self,
+        *,
+        owner_id: UUID,
+        project_id: UUID,
+        media_asset_id: UUID,
+        expected_version: int,
+    ) -> TranscriptRecord: ...
+
+    async def mark_cancelled(
+        self, *, owner_id: UUID, project_id: UUID, media_asset_id: UUID
+    ) -> TranscriptRecord: ...
+
+
+class TranscriptWorkflowRepository(Protocol):
+    async def get_record_internal(self, media_asset_id: UUID) -> TranscriptRecord: ...
+
+    async def get_media_asset_internal(self, media_asset_id: UUID) -> MediaAsset: ...
+
+    async def get_artifact_internal(self, artifact_id: UUID) -> Artifact | None: ...
+
+    async def replace_ocr_observations(
+        self, *, media_asset_id: UUID, observations: list[OcrObservation]
+    ) -> None: ...
+
+    async def load_ocr_observations(self, media_asset_id: UUID) -> list[OcrObservation]: ...
+
+    async def publish_ocr_segments(
+        self, *, media_asset_id: UUID, segments: list[ConsolidatedSegment]
+    ) -> tuple[SubtitleSegment, ...]: ...
+
+    async def set_transcript_status(
+        self,
+        media_asset_id: UUID,
+        status: TranscriptStatus,
+        *,
+        error_code: str | None = None,
+    ) -> None: ...
+
+    async def begin_stage(
+        self,
+        *,
+        project_id: UUID,
+        media_asset_id: UUID,
+        workflow_id: str,
+        stage_name: str,
+        attempt: int,
+        input_fingerprint: str,
+        worker_id: str,
+    ) -> UUID: ...
+
+    async def finish_stage(
+        self,
+        stage_execution_id: UUID,
+        *,
+        status: str,
+        error_code: str | None = None,
+        retryable: bool | None = None,
+    ) -> None: ...
 
 
 class MediaWorkflowRepository(Protocol):
@@ -192,3 +342,11 @@ class MediaProcessor(Protocol):
     async def probe(self, path: Path) -> MediaProbe: ...
 
     async def generate_proxy(self, source: Path, destination: Path) -> None: ...
+
+    async def extract_subtitle_frames(
+        self, source: Path, destination: Path, region: SubtitleRegion
+    ) -> list[ExtractedSubtitleFrame]: ...
+
+
+class OcrProvider(Protocol):
+    async def recognize(self, path: Path) -> OcrResult: ...
