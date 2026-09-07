@@ -90,6 +90,37 @@ class SpeechService:
             segments.append(replace(segment, audio_url=audio_url))
         return replace(snapshot, segments=tuple(segments))
 
+    async def retry_segment(
+        self,
+        *,
+        owner_id: UUID,
+        project_id: UUID,
+        media_asset_id: UUID,
+        segment_id: UUID,
+        text: str | None,
+    ) -> SpeechSnapshot:
+        snapshot = await self.get(
+            owner_id=owner_id,
+            project_id=project_id,
+            media_asset_id=media_asset_id,
+        )
+        if snapshot.record.status is not SpeechStatus.WAITING_FOR_REVIEW:
+            raise ConflictError("Speech is not waiting for segment review")
+        if snapshot.record.workflow_id is None:
+            raise ConflictError("Speech workflow is not available for retry")
+        segment = next((item for item in snapshot.segments if item.input.id == segment_id), None)
+        if segment is None:
+            raise ConflictError("Speech segment does not belong to this media asset")
+        cleaned = text.strip() if text is not None else None
+        if cleaned is not None and (not cleaned or len(cleaned) > 4000):
+            raise ValidationError("Speech repair text is invalid", code="TTS_TEXT_INVALID")
+        await self._workflows.retry_speech_segment(
+            workflow_id=snapshot.record.workflow_id,
+            segment_id=segment_id,
+            text=cleaned,
+        )
+        return snapshot
+
     async def approve(
         self,
         *,
@@ -109,18 +140,17 @@ class SpeechService:
             return snapshot
         if snapshot.record.status is not SpeechStatus.WAITING_FOR_REVIEW:
             raise ConflictError("Speech is not ready for approval")
+        if snapshot.record.workflow_id is None:
+            raise ConflictError("Speech workflow is not available for approval")
         if any(segment.status.value != "fit" for segment in snapshot.segments):
             raise ConflictError("Every speech segment must fit before approval")
-        record = await self._repository.approve(
+        await self._repository.approve(
             owner_id=owner_id,
             project_id=project_id,
             media_asset_id=media_asset_id,
             expected_version=expected_version,
         )
-        await self._workflows.approve_speech(
-            media_asset_id=media_asset_id,
-            speech_version=record.version,
-        )
+        await self._workflows.approve_speech(workflow_id=snapshot.record.workflow_id)
         return await self.get(
             owner_id=owner_id,
             project_id=project_id,
@@ -139,10 +169,8 @@ class SpeechService:
             return snapshot
         if snapshot.record.status is SpeechStatus.APPROVED:
             raise ConflictError("Approved speech cannot be cancelled")
-        await self._workflows.cancel_speech(
-            media_asset_id=media_asset_id,
-            speech_version=snapshot.record.version,
-        )
+        if snapshot.record.workflow_id is not None:
+            await self._workflows.cancel_speech(workflow_id=snapshot.record.workflow_id)
         await self._repository.mark_cancelled(
             owner_id=owner_id,
             project_id=project_id,
