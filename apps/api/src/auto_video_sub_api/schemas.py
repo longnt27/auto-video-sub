@@ -4,7 +4,8 @@ from datetime import datetime
 from uuid import UUID
 
 from auto_video_sub_application import MediaView, UploadGrant
-from auto_video_sub_domain import MediaAsset, Project
+from auto_video_sub_application.ports import TranscriptSnapshot
+from auto_video_sub_domain import MediaAsset, Project, SubtitleRegion, SubtitleSegment
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -126,6 +127,113 @@ class MediaResponse(BaseModel):
             proxy_url_expires_at=view.proxy_url_expires_at,
             created_at=view.media.created_at,
             updated_at=view.media.updated_at,
+        )
+
+
+class StartTranscriptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    x_start_ratio: float = Field(default=0.05, ge=0, le=1)
+    x_end_ratio: float = Field(default=0.95, ge=0, le=1)
+    y_start_ratio: float = Field(default=0.68, ge=0, le=1)
+    y_end_ratio: float = Field(default=0.98, ge=0, le=1)
+    sample_interval_ms: int = Field(default=400, ge=100, le=5000)
+
+    def to_domain(self) -> SubtitleRegion:
+        return SubtitleRegion(
+            x_start_ratio=self.x_start_ratio,
+            x_end_ratio=self.x_end_ratio,
+            y_start_ratio=self.y_start_ratio,
+            y_end_ratio=self.y_end_ratio,
+            sample_interval_ms=self.sample_interval_ms,
+        )
+
+
+class EditSourceSegmentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=4000)
+    expected_version: int = Field(ge=1)
+
+
+class ApproveTranscriptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_version: int = Field(ge=1)
+
+
+class SourceRevisionResponse(BaseModel):
+    id: UUID
+    version: int
+    text: str
+    origin: str
+    confidence: float | None
+
+
+class SubtitleSegmentResponse(BaseModel):
+    id: UUID
+    ordinal: int
+    start_us: int
+    end_us: int
+    version: int
+    source: SourceRevisionResponse
+
+    @classmethod
+    def from_domain(cls, segment: SubtitleSegment) -> SubtitleSegmentResponse:
+        return cls(
+            id=segment.id,
+            ordinal=segment.ordinal,
+            start_us=segment.start_us,
+            end_us=segment.end_us,
+            version=segment.version,
+            source=SourceRevisionResponse(
+                id=segment.current_revision.id,
+                version=segment.current_revision.version,
+                text=segment.current_revision.text,
+                origin=segment.current_revision.origin,
+                confidence=segment.current_revision.confidence,
+            ),
+        )
+
+
+class TranscriptRegionResponse(BaseModel):
+    x_start_ratio: float
+    x_end_ratio: float
+    y_start_ratio: float
+    y_end_ratio: float
+    sample_interval_ms: int
+
+
+class TranscriptResponse(BaseModel):
+    project_id: UUID
+    media_asset_id: UUID
+    status: str
+    version: int
+    region: TranscriptRegionResponse
+    error_code: str | None
+    segments: list[SubtitleSegmentResponse]
+    created_at: datetime
+    updated_at: datetime
+
+    @classmethod
+    def from_domain(cls, snapshot: TranscriptSnapshot) -> TranscriptResponse:
+        record = snapshot.record
+        return cls(
+            project_id=record.project_id,
+            media_asset_id=record.media_asset_id,
+            status=record.status,
+            version=record.version,
+            region=TranscriptRegionResponse(
+                x_start_ratio=record.region.x_start_ratio,
+                x_end_ratio=record.region.x_end_ratio,
+                y_start_ratio=record.region.y_start_ratio,
+                y_end_ratio=record.region.y_end_ratio,
+                sample_interval_ms=record.region.sample_interval_ms,
+            ),
+            error_code=record.error_code,
+            segments=[SubtitleSegmentResponse.from_domain(item) for item in snapshot.segments],
+            created_at=record.created_at,
+            updated_at=record.updated_at,
         )
 
 
