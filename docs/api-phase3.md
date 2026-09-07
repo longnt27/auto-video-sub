@@ -59,3 +59,7 @@ Editing a segment creates a new `source_revisions` row and advances only that se
 Provider/media/domain failures map to stable `OCR_*`, `MEDIA_*`, `TRANSCRIPT_*`, or existing structured error codes. Exhausted processing moves the transcript to `failed`; the user may restart. Cancelled work may restart. Approved transcripts cannot be cancelled or restarted by Phase 3 commands.
 
 No ordinary Phase 3 test invokes the paid translation provider.
+
+## Exit verification
+
+Phase 3 exit verification is enforced by the normal repository CI: frozen Python dependency install, Ruff formatting/lint, mypy, pytest, pinned FFmpeg media tests, PostgreSQL/Garage/migration integration tests, web formatting/lint/typecheck/tests/production build, and Compose validation. The Phase 3 implementation passed these gates before the roadmap status was advanced to completed.
