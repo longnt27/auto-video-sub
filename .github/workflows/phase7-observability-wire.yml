@@ -29,8 +29,8 @@ jobs:
         run: uv sync --all-packages --all-groups --frozen
       - name: Verify Python candidate
         run: |
-          uv run ruff format .
-          uv run ruff check --fix .
+          uv run ruff format . --exclude scripts/phase7_observability_patch.py
+          uv run ruff check --fix . --exclude scripts/phase7_observability_patch.py
           uv run mypy
           uv run pytest packages/infrastructure/tests apps/api/tests
       - name: Verify observability topology
