@@ -2,6 +2,8 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
+import SubtitleStyleReview from "./subtitle-style-review";
+
 type Project = { id: string; title: string; lifecycle: string };
 type Media = {
   id: string;
@@ -993,6 +995,14 @@ export default function Workspace() {
               Approve Vietnamese translation
             </button>
           )}
+          <SubtitleStyleReview
+            projectId={translation.project_id}
+            mediaAssetId={translation.media_asset_id}
+            proxyUrl={media?.proxy_url ?? null}
+            segments={translation.segments}
+            disabled={translationBusy}
+            onMessage={setMessage}
+          />
           {translation.error_code && (
             <p className="status-line">Translation error: {translation.error_code}</p>
           )}

@@ -218,7 +218,14 @@ export default function SubtitleStyleReview({
                 setCurrentTimeUs(Math.round(event.currentTarget.currentTime * 1_000_000))
               }
               style={{ width: "100%", display: "block" }}
-            />
+            >
+              <track
+                kind="captions"
+                src="/empty.vtt"
+                srcLang="vi"
+                label="Vietnamese subtitle preview"
+              />
+            </video>
           ) : (
             <p className="empty-copy" style={{ padding: "2rem" }}>
               Proxy preview is unavailable.
@@ -241,8 +248,7 @@ export default function SubtitleStyleReview({
               <span
                 style={{
                   maxWidth: "90%",
-                  padding:
-                    draft.background_opacity_pct > 0 ? "0.18em 0.42em 0.24em" : undefined,
+                  padding: draft.background_opacity_pct > 0 ? "0.18em 0.42em 0.24em" : undefined,
                   borderRadius: draft.background_opacity_pct > 0 ? "0.2em" : undefined,
                   background: rgba(draft.background_color, draft.background_opacity_pct),
                   color: draft.text_color,
@@ -266,7 +272,9 @@ export default function SubtitleStyleReview({
             id="subtitle-font"
             value={draft.font_id}
             disabled={disabled || busy}
-            onChange={(event) => setDraft((current) => current && { ...current, font_id: event.target.value })}
+            onChange={(event) =>
+              setDraft((current) => current && { ...current, font_id: event.target.value })
+            }
           >
             {fonts.map((font) => (
               <option key={font.id} value={font.id}>
@@ -275,7 +283,9 @@ export default function SubtitleStyleReview({
             ))}
           </select>
 
-          <label htmlFor="subtitle-size">Font size · {draft.font_size_pct.toFixed(1)}% height</label>
+          <label htmlFor="subtitle-size">
+            Font size · {draft.font_size_pct.toFixed(1)}% height
+          </label>
           <input
             id="subtitle-size"
             type="range"
@@ -310,7 +320,9 @@ export default function SubtitleStyleReview({
                 value={draft.outline_color}
                 disabled={disabled || busy}
                 onChange={(event) =>
-                  setDraft((current) => current && { ...current, outline_color: event.target.value })
+                  setDraft(
+                    (current) => current && { ...current, outline_color: event.target.value },
+                  )
                 }
               />
             </label>
@@ -321,7 +333,9 @@ export default function SubtitleStyleReview({
                 value={draft.background_color}
                 disabled={disabled || busy}
                 onChange={(event) =>
-                  setDraft((current) => current && { ...current, background_color: event.target.value })
+                  setDraft(
+                    (current) => current && { ...current, background_color: event.target.value },
+                  )
                 }
               />
             </label>
@@ -380,8 +394,8 @@ export default function SubtitleStyleReview({
           />
 
           <small>
-            Center alignment only in MVP. HTML preview and Phase 6 ASS/libass render consume the same
-            structured style version; saving here never calls translation or FFmpeg.
+            Center alignment only in MVP. HTML preview and Phase 6 ASS/libass render consume the
+            same structured style version; saving here never calls translation or FFmpeg.
           </small>
           <button type="button" disabled={disabled || busy || !dirty} onClick={() => void save()}>
             Save subtitle style revision
