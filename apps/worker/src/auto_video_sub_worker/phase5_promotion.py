@@ -144,6 +144,10 @@ async def run(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
 
+    checklist_intro = (
+        "Promotion requires every generated sample to preserve the written content and be "
+        "intelligible in Vietnamese. Mark each row only after listening to the WAV."
+    )
     checklist = [
         "# Phase 5 VieNeu listening review",
         "",
@@ -151,7 +155,7 @@ async def run(args: argparse.Namespace) -> int:
         f"Voice: `{args.voice}`  ",
         f"Precision: `{args.precision}`",
         "",
-        "Promotion requires every generated sample to preserve the written content and be intelligible in Vietnamese. Mark each row only after listening to the WAV.",
+        checklist_intro,
         "",
         "| # | WAV | Expected text | Content intact | Pronunciation acceptable |",
         "|---:|---|---|:---:|:---:|",
