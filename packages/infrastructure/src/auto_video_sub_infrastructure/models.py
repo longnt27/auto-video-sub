@@ -260,7 +260,16 @@ class SubtitleSegmentModel(Base):
     ordinal: Mapped[int] = mapped_column(Integer)
     start_us: Mapped[int] = mapped_column(BigInteger)
     end_us: Mapped[int] = mapped_column(BigInteger)
-    current_source_revision_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    current_source_revision_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey(
+            "source_revisions.id",
+            ondelete="RESTRICT",
+            use_alter=True,
+            name="fk_segment_current_source_revision",
+        ),
+        nullable=True,
+    )
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
