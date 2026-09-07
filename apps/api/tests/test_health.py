@@ -30,7 +30,7 @@ def settings_for_test() -> Settings:
 
 def test_phase4_translation_routes_are_mounted() -> None:
     app = create_app(settings=settings_for_test(), probes=[])
-    paths = {route.path for route in app.routes if hasattr(route, "path")}
+    paths = app.openapi()["paths"]
 
     assert "/v1/translation/tones" in paths
     assert "/v1/projects/{project_id}/media/{media_asset_id}/translation/estimate" in paths
