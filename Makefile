@@ -1,9 +1,12 @@
 SHELL := /bin/sh
 UV_CACHE_DIR ?= .cache/uv
 COMPOSE_FILE := deploy/compose.yaml
+OBSERVABILITY_COMPOSE_FILE := deploy/compose.observability.yaml
 
 .PHONY: bootstrap lock format format-check lint typecheck test test-integration check build \
-	stack-config stack-up stack-smoke stack-smoke-phase2 stack-down api worker web disk-check \
+	stack-config stack-up stack-smoke stack-smoke-phase2 stack-down \
+	stack-observability-config stack-observability-up stack-observability-smoke \
+	stack-observability-down api worker web disk-check \
 	migration-check migrate
 
 bootstrap:
@@ -66,6 +69,18 @@ stack-smoke-phase2:
 
 stack-down:
 	docker compose --env-file .env.example -f $(COMPOSE_FILE) down
+
+stack-observability-config:
+	docker compose --env-file .env.example -f $(COMPOSE_FILE) -f $(OBSERVABILITY_COMPOSE_FILE) config --quiet
+
+stack-observability-up: disk-check
+	docker compose --env-file .env.example -f $(COMPOSE_FILE) -f $(OBSERVABILITY_COMPOSE_FILE) up -d --build --wait
+
+stack-observability-smoke:
+	./scripts/smoke-observability.sh
+
+stack-observability-down:
+	docker compose --env-file .env.example -f $(COMPOSE_FILE) -f $(OBSERVABILITY_COMPOSE_FILE) down
 
 api:
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run auto-video-sub-api
