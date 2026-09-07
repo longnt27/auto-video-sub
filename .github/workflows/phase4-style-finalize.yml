@@ -23,10 +23,43 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Wire synchronized style review into workspace
+      - name: Finalize synchronized style review
         run: |
           python - <<'PY'
           from pathlib import Path
+
+          style_path = Path("apps/web/app/subtitle-style-review.tsx")
+          style_text = style_path.read_text()
+          old_video = '''            <video
+              src={proxyUrl}
+              controls
+              preload="metadata"
+              onTimeUpdate={(event) =>
+                setCurrentTimeUs(Math.round(event.currentTarget.currentTime * 1_000_000))
+              }
+              style={{ width: "100%", display: "block" }}
+            />'''
+          new_video = '''            <video
+              src={proxyUrl}
+              controls
+              preload="metadata"
+              onTimeUpdate={(event) =>
+                setCurrentTimeUs(Math.round(event.currentTarget.currentTime * 1_000_000))
+              }
+              style={{ width: "100%", display: "block" }}
+            >
+              <track
+                kind="captions"
+                src="/empty.vtt"
+                srcLang="vi"
+                label="Vietnamese subtitle preview"
+              />
+            </video>'''
+          if old_video in style_text:
+              style_text = style_text.replace(old_video, new_video, 1)
+          elif 'label="Vietnamese subtitle preview"' not in style_text:
+              raise SystemExit("subtitle preview video anchor missing")
+          style_path.write_text(style_text)
 
           path = Path("apps/web/app/workspace.tsx")
           text = path.read_text()
