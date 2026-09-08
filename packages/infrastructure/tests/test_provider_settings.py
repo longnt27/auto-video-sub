@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import stat
+from pathlib import Path
 
 import pytest
 from auto_video_sub_infrastructure.provider_settings import LocalTranslationProviderSettingsStore
 
 
 @pytest.mark.asyncio
-async def test_provider_settings_masks_key_and_writes_owner_only_file(tmp_path: object) -> None:
-    path = tmp_path / "translation-provider.json"  # type: ignore[operator]
+async def test_provider_settings_masks_key_and_writes_owner_only_file(tmp_path: Path) -> None:
+    path = tmp_path / "translation-provider.json"
     store = LocalTranslationProviderSettingsStore(path)
 
     view = await store.configure(
@@ -26,8 +27,8 @@ async def test_provider_settings_masks_key_and_writes_owner_only_file(tmp_path: 
 
 
 @pytest.mark.asyncio
-async def test_provider_settings_keep_existing_key_when_only_model_changes(tmp_path: object) -> None:
-    path = tmp_path / "translation-provider.json"  # type: ignore[operator]
+async def test_provider_settings_keep_existing_key_when_only_model_changes(tmp_path: Path) -> None:
+    path = tmp_path / "translation-provider.json"
     store = LocalTranslationProviderSettingsStore(path)
     await store.configure(
         provider="openai",
@@ -48,9 +49,9 @@ async def test_provider_settings_keep_existing_key_when_only_model_changes(tmp_p
 
 @pytest.mark.asyncio
 async def test_credentials_for_pinned_policy_use_requested_model_and_provider_key(
-    tmp_path: object,
+    tmp_path: Path,
 ) -> None:
-    path = tmp_path / "translation-provider.json"  # type: ignore[operator]
+    path = tmp_path / "translation-provider.json"
     store = LocalTranslationProviderSettingsStore(path)
     await store.configure(
         provider="openai",
@@ -76,8 +77,8 @@ async def test_credentials_for_pinned_policy_use_requested_model_and_provider_ke
 
 
 @pytest.mark.asyncio
-async def test_provider_settings_reject_unknown_provider(tmp_path: object) -> None:
-    path = tmp_path / "translation-provider.json"  # type: ignore[operator]
+async def test_provider_settings_reject_unknown_provider(tmp_path: Path) -> None:
+    path = tmp_path / "translation-provider.json"
     store = LocalTranslationProviderSettingsStore(path)
 
     with pytest.raises(ValueError, match="Unsupported translation provider"):
