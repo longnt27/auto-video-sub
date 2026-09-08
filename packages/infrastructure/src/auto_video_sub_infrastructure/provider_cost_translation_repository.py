@@ -89,7 +89,8 @@ class ProviderReportedCostTranslationRepository(SqlAlchemyTranslationRepository)
                     raise RuntimeError("Translation policy is missing")
                 current_status = TranslationStatus(state.status)
                 same_policy = (
-                    current_policy.preset == preset.value
+                    state.transcript_version == transcript.version
+                    and current_policy.preset == preset.value
                     and current_policy.provider == provider
                     and current_policy.model == model
                     and current_policy.prompt_version == prompt_version
@@ -107,7 +108,7 @@ class ProviderReportedCostTranslationRepository(SqlAlchemyTranslationRepository)
                 }:
                     raise ConflictError(
                         "Cancel or finish the current translation before changing "
-                        "provider, model, or tone"
+                        "provider, model, tone, or source transcript"
                     )
 
             now = datetime.now(UTC)
