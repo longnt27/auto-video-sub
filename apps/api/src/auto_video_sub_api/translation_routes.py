@@ -13,7 +13,9 @@ from auto_video_sub_api.translation_schemas import (
     StartTranslationRequest,
     TonePresetResponse,
     TranslationEstimateResponse,
+    TranslationProviderSettingsResponse,
     TranslationResponse,
+    UpdateTranslationProviderSettingsRequest,
 )
 
 router = APIRouter(prefix="/v1", tags=["translation"])
@@ -26,6 +28,36 @@ async def list_translation_tones(user: CurrentUser, request: Request) -> list[To
         TonePresetResponse(id=item.preset, label=item.label)
         for item in request.app.state.translation_service.tone_catalog()
     ]
+
+
+@router.get(
+    "/translation/provider-settings",
+    response_model=TranslationProviderSettingsResponse,
+)
+async def get_translation_provider_settings(
+    user: CurrentUser, request: Request
+) -> TranslationProviderSettingsResponse:
+    del user
+    active = await request.app.state.translation_service.get_provider_settings()
+    return TranslationProviderSettingsResponse.build(active)
+
+
+@router.put(
+    "/translation/provider-settings",
+    response_model=TranslationProviderSettingsResponse,
+)
+async def update_translation_provider_settings(
+    body: UpdateTranslationProviderSettingsRequest,
+    user: CurrentUser,
+    request: Request,
+) -> TranslationProviderSettingsResponse:
+    del user
+    active = await request.app.state.translation_service.configure_provider(
+        provider=body.provider,
+        model=body.model,
+        api_key=body.api_key,
+    )
+    return TranslationProviderSettingsResponse.build(active)
 
 
 @router.post(
@@ -66,7 +98,6 @@ async def start_translation(
         media_asset_id=media_asset_id,
         preset=body.preset,
         confirm_paid=body.confirm_paid,
-        max_cost_micros=body.max_cost_micros,
     )
     return TranslationResponse.from_domain(snapshot)
 
@@ -152,6 +183,11 @@ async def approve_translation(
         project_id=project_id,
         media_asset_id=media_asset_id,
         expected_version=body.expected_version,
+    )
+    await request.app.state.translation_service.get(
+        owner_id=user.id,
+        project_id=project_id,
+        media_asset_id=media_asset_id,
     )
     return TranslationResponse.from_domain(snapshot)
 
