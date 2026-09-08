@@ -48,3 +48,4 @@ async function forward(request: NextRequest, context: RouteContext): Promise<Nex
 
 export const GET = forward;
 export const POST = forward;
+export const PUT = forward;
