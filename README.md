@@ -6,42 +6,41 @@
 
 Auto Video Sub is a local-first web application for turning Chinese videos with ordinary bottom-region subtitles into reviewable Vietnamese-localized videos.
 
-The workflow is intentionally human-in-the-loop: the app automates the expensive and repetitive work, while still letting you correct OCR, translation, timing, speech, and subtitle appearance before producing the final file.
+The workflow is intentionally human-in-the-loop: the app automates OCR, translation, speech fitting, and rendering while keeping source text, translation, timing, speech, and subtitle appearance reviewable before export.
 
 ## What it can do
 
 - Upload and validate supported video files.
 - Generate a lightweight browser playback proxy.
-- Extract Chinese subtitles from a configurable lower-frame region.
-- Run local OCR with RapidOCR and consolidate detections into timestamped segments.
+- Extract Chinese subtitles from a configurable lower-frame region with local RapidOCR.
 - Review and correct the Chinese source transcript without re-uploading the video.
 - Build story-wide context, names, entities, relationships, and glossary hints.
-- Translate Chinese subtitles to Vietnamese with a cloud LLM.
-- Use project-wide translation tones: `natural`, `funny`, `formal`, or `dramatic`.
+- Translate Chinese subtitles to Vietnamese with a user-selected cloud AI provider.
+- Configure **OpenAI, DeepSeek, or OpenRouter directly in the app**.
+- Choose a project-wide translation tone: `natural`, `funny`, `formal`, or `dramatic`.
 - Review and edit Vietnamese translations before approval.
 - Preview structured subtitle styles in the browser.
 - Generate Vietnamese speech locally with VieNeu-TTS v3 Turbo.
-- Fit speech into subtitle timing using silence trimming, bounded speed-up, and optional local rewriting.
-- Render subtitles and Vietnamese speech into the final video with FFmpeg/libass.
-- Retain, reduce, or remove the original audio during rendering.
+- Fit speech into subtitle timing with trimming, bounded speed-up, and optional local rewriting.
+- Render subtitles and Vietnamese speech into a final H.264/AAC MP4 with FFmpeg/libass.
+- Retain, reduce, or remove original audio during rendering.
 - Validate the rendered output before making it downloadable.
-- Preserve immutable revisions and artifact lineage so selective edits do not require rerunning the entire pipeline.
+- Preserve immutable revisions and artifact lineage so small edits do not require rerunning the whole pipeline.
 
 ## Current status
-
-Implementation through the final render/export workflow is complete. The application currently includes:
 
 | Stage | Status |
 | --- | --- |
 | Project creation, upload, validation, proxy | Complete |
 | Chinese subtitle OCR and transcript review | Complete |
 | Context-aware Chinese → Vietnamese translation | Complete |
+| In-app AI provider configuration | Complete |
 | Vietnamese translation review and subtitle styling | Complete |
 | Local Vietnamese TTS and duration fitting | Complete |
 | Final render, validation, and download | Complete |
 | Production hardening and operational polish | In progress |
 
-The project is currently optimized for a **single-user, self-hosted deployment**, especially on Apple Silicon.
+The current deployment is optimized for **single-user self-hosting**, especially on Apple Silicon.
 
 ## Processing flow
 
@@ -82,7 +81,7 @@ Download localized MP4
 | Object storage | Garage / S3-compatible storage |
 | Media processing | FFmpeg, ffprobe, libass |
 | OCR | RapidOCR / ONNX Runtime |
-| Translation | OpenAI Responses API |
+| Translation | OpenAI-compatible Responses API: OpenAI, DeepSeek, OpenRouter |
 | Vietnamese TTS | VieNeu-TTS v3 Turbo / ONNX |
 | Optional local rewrite | llama.cpp-compatible HTTP endpoint |
 | Observability | OpenTelemetry, Prometheus, Jaeger, Grafana |
@@ -90,28 +89,16 @@ Download localized MP4
 
 ## Requirements
 
-### Recommended: Docker deployment
-
-For normal personal use you only need:
+For normal personal use:
 
 - Git
 - Docker with Docker Compose
-- at least **6 GiB of free disk space** for the base stack, plus space for uploaded videos and generated artifacts
-- an OpenAI API key for translation
+- at least **6 GiB of free disk space** for the base stack, plus source/output media
+- an API key for at least one supported translation provider
 - a local VieNeu-TTS v3 Turbo model snapshot
 - `NotoSans-Regular.ttf` for deterministic final subtitle rendering
 
-Apple Silicon is the primary local deployment target, but the application images are built for both `linux/amd64` and `linux/arm64`.
-
-### Optional: host development tools
-
-If you want to run services or checks outside Docker, use the pinned development toolchain:
-
-- Node.js `22.22.x`
-- pnpm `11.15.x`
-- Python `3.12.13`
-- uv `0.11.3`
-- FFmpeg / ffprobe
+Apple Silicon is the primary local deployment target. Application images remain multi-architecture where practical.
 
 ## Installation
 
@@ -122,44 +109,23 @@ git clone https://github.com/longnt27/auto_video_sub.git
 cd auto_video_sub
 ```
 
-### 2. Create your local configuration
+### 2. Create local configuration
 
 ```bash
 cp .env.example .env
 ```
 
-The committed `.env.example` contains safe development defaults. Put real credentials and local model paths only in `.env`.
+`.env` now contains infrastructure/runtime configuration only. **Do not put translation provider API keys, models, or token pricing in it.** Those are selected from the application UI.
 
-### 3. Configure translation
+### 3. Install the local VieNeu TTS model
 
-Edit `.env` and provide at least:
-
-```dotenv
-TRANSLATION_PROVIDER_NAME=openai
-TRANSLATION_PROVIDER_BASE_URL=https://api.openai.com/v1/responses
-TRANSLATION_PROVIDER_API_KEY=<your-api-key>
-TRANSLATION_PROVIDER_MODEL=<your-model>
-
-TRANSLATION_INPUT_COST_MICROS_PER_MILLION_TOKENS=<model-input-rate>
-TRANSLATION_OUTPUT_COST_MICROS_PER_MILLION_TOKENS=<model-output-rate>
-DEFAULT_TRANSLATION_BUDGET_MICROS=<maximum-project-budget>
-```
-
-Translation is the only intentionally paid runtime dependency. The app requires explicit confirmation before starting paid translation work.
-
-Keep the model pricing values aligned with the model you actually use. They are used for cost estimation and budget enforcement; the repository intentionally does not hard-code provider pricing.
-
-### 4. Install the local VieNeu TTS model
-
-By default the Compose stack expects the model at:
+By default Compose expects the model at:
 
 ```text
 .local/models/vieneu/
 ```
 
-Point `TTS_MODEL_HOST_PATH` somewhere else if you already keep the model in another directory.
-
-The configured model snapshot must contain the VieNeu ONNX assets expected by the runtime, including the appropriate ONNX directory and codec assets. Then set:
+Set the reviewed model and voice in `.env`:
 
 ```dotenv
 TTS_MODEL_HOST_PATH=./.local/models/vieneu
@@ -170,23 +136,23 @@ TTS_PRECISION=fp32
 
 `TTS_PRECISION` supports `fp32` and `int8`.
 
-The runtime deliberately does **not** download a floating model at startup. A missing model, revision, or voice fails closed instead of silently changing TTS behavior.
+The runtime deliberately does not download a floating TTS model at startup. Missing model, revision, or voice configuration fails closed.
 
-### 5. Install the render font
+### 4. Install the render font
 
-Place a licensed Noto Sans Regular font file at:
+Place Noto Sans Regular at:
 
 ```text
 .local/fonts/NotoSans-Regular.ttf
 ```
 
-Then calculate its SHA-256 checksum on macOS:
+Calculate its SHA-256 checksum on macOS:
 
 ```bash
 shasum -a 256 .local/fonts/NotoSans-Regular.ttf
 ```
 
-Copy the checksum into `.env`:
+Then set:
 
 ```dotenv
 RENDER_FONT_HOST_PATH=./.local/fonts/NotoSans-Regular.ttf
@@ -194,11 +160,9 @@ RENDER_FONT_FILENAME=NotoSans-Regular.ttf
 RENDER_FONT_CHECKSUM_SHA256=<sha256>
 ```
 
-The checksum is pinned into render metadata so a final output can be reproduced from the same inputs.
+### 5. Optional: configure local Vietnamese rewriting
 
-### 6. Optional: configure local Vietnamese rewriting
-
-When synthesized speech is still too long after trimming and bounded speed-up, the application can ask a local llama.cpp-compatible service for a shorter meaning-preserving Vietnamese rewrite.
+If speech still cannot fit after silence trimming and bounded speed-up, the app can use a local llama.cpp-compatible endpoint for a shorter meaning-preserving Vietnamese rewrite.
 
 ```dotenv
 REWRITE_PROVIDER_ENDPOINT=<local-http-endpoint>
@@ -206,11 +170,11 @@ REWRITE_PROVIDER_MODEL=<model-name>
 REWRITE_PROVIDER_MODEL_REVISION=<model-revision>
 ```
 
-This is optional. If it is not configured, segments that cannot fit safely are surfaced for manual review instead.
+Without it, unresolved duration failures are surfaced for manual review.
 
 ## Running the application
 
-For the complete localization workflow, including the paid translation worker, run:
+Start the full localization stack, including the translation worker:
 
 ```bash
 docker compose \
@@ -220,56 +184,69 @@ docker compose \
   up -d --build --wait
 ```
 
-Then open:
+Open:
 
 - Web app: `http://127.0.0.1:3100`
+- AI settings: `http://127.0.0.1:3100/settings`
 - API: `http://127.0.0.1:8000`
 
-The local development stack binds the browser-facing services to loopback, so it is not exposed publicly by default.
+The browser-facing services bind to loopback by default.
 
-Check running services with:
+### Configure the translation provider in the app
+
+Before starting translation, open **AI settings** and choose a provider:
+
+| Provider | Configuration |
+| --- | --- |
+| OpenAI | API key + model ID |
+| DeepSeek | API key + model ID |
+| OpenRouter | API key + model ID |
+
+The app provides model suggestions but accepts another valid model ID supported by the selected provider.
+
+The API key is written to the private Docker `provider-config` volume shared only by the API and translation worker. The backend returns only a masked key hint to the browser; it never echoes the complete key back through the settings API.
+
+Changing the active provider affects new translation runs. Each run pins its provider and model in the translation policy so lineage remains deterministic.
+
+### Cost and usage reporting
+
+The app no longer calculates monetary cost from prices stored in `.env`.
+
+- Every provider response records its returned token usage.
+- If the provider returns an exact monetary charge in its response, that amount is recorded as provider-reported cost.
+- If the provider does **not** expose an exact per-response monetary cost, the app shows monetary cost as unavailable instead of inventing a number from a local pricing table.
+
+OpenRouter currently exposes request cost through its usage payload when requested. OpenAI and DeepSeek provide token usage in the Responses API but do not provide an exact dollar charge for each response, so the app keeps their monetary cost unavailable.
+
+## Useful runtime commands
+
+Check services:
 
 ```bash
-docker compose \
-  --env-file .env \
-  -f deploy/compose.yaml \
-  --profile translation \
-  ps
+docker compose --env-file .env -f deploy/compose.yaml --profile translation ps
 ```
 
-Follow logs with:
+Follow logs:
 
 ```bash
-docker compose \
-  --env-file .env \
-  -f deploy/compose.yaml \
-  --profile translation \
-  logs -f
+docker compose --env-file .env -f deploy/compose.yaml --profile translation logs -f
 ```
 
-Stop the stack without deleting stored data:
+Stop while preserving data and provider settings:
 
 ```bash
-docker compose \
-  --env-file .env \
-  -f deploy/compose.yaml \
-  --profile translation \
-  down
+docker compose --env-file .env -f deploy/compose.yaml --profile translation down
 ```
 
-> **Warning:** `docker compose down -v` deletes the persistent PostgreSQL and object-storage volumes. Do not use it unless you intentionally want to wipe local application data.
+> `docker compose down -v` deletes PostgreSQL, object-storage data, **and the saved AI provider configuration/API keys**. Use it only for an intentional local reset.
 
 ## Using the app
 
-### 1. Create a project
+### 1. Create a project and upload a video
 
-Open `http://127.0.0.1:3100`, create a project, and select the video you want to localize.
+Create a project, upload the source video, and wait for validation and proxy generation.
 
-### 2. Upload the source video
-
-The browser uploads the original video to the local S3-compatible object store. The backend then validates the media and generates a browser-friendly proxy.
-
-Default local admission limits are:
+Default local admission limits:
 
 | Limit | Default |
 | --- | ---: |
@@ -280,86 +257,51 @@ Default local admission limits are:
 | Maximum streams | 16 |
 | Supported declarations | MP4, QuickTime, Matroska, WebM |
 
-### 3. Extract Chinese subtitles
+### 2. Extract Chinese subtitles
 
-Start source transcript processing after the proxy is ready.
+Start source-transcript processing after the proxy is ready. The default OCR region targets ordinary hard-coded subtitles near the bottom of the frame.
 
-The default OCR region covers the lower part of the frame, where ordinary hard-coded Chinese subtitles are expected. Adjust the subtitle region or sampling interval when the source video uses a different layout.
+### 3. Review the source transcript
 
-The application samples the configured region, runs RapidOCR locally, and consolidates repeated observations into timestamped source segments.
+Correct OCR text or timing where necessary, then approve the source transcript. Corrections create immutable revisions and do not require another upload.
 
-### 4. Review the source transcript
+### 4. Build translation context
 
-Watch the proxy while reviewing the extracted Chinese subtitle segments.
+The app extracts story context such as names, places, organizations, relationships, recurring terminology, and ambiguities. Review important context before translation batches continue.
 
-Correct OCR text or timing where necessary, then approve the source transcript. Corrections create new immutable revisions; they do not require another upload or proxy generation.
+### 5. Translate to Vietnamese
 
-### 5. Build translation context
+Select a tone:
 
-The app extracts story-wide context such as names, places, organizations, relationships, recurring terminology, and ambiguous entities.
+- `natural` — neutral conversational Vietnamese
+- `funny` — playful where the source supports it
+- `formal` — polished and restrained
+- `dramatic` — more emotionally vivid without inventing plot facts
 
-Review important context or glossary entries before translation when consistency matters.
+The app shows the approximate token scope and requires explicit confirmation before paid translation begins. It does **not** fabricate a currency estimate when the provider has not reported an actual charge yet.
 
-### 6. Translate to Vietnamese
+### 6. Review translation and subtitle style
 
-Choose one translation tone:
+Review Chinese and Vietnamese segments side by side, edit translations as needed, and configure the project-wide subtitle appearance.
 
-- `natural` — default, neutral Vietnamese localization
-- `funny` — preserves meaning while allowing humor already supported by the source
-- `formal` — more formal wording and register
-- `dramatic` — stronger expression without inventing facts or plot
+Style preview is browser-side and does not trigger another translation or video render.
 
-The UI shows the estimated paid scope before translation. Confirm it explicitly to start the translation worker.
-
-### 7. Review translation and subtitle style
-
-Review Chinese and Vietnamese segments side by side and correct any translation you do not like.
-
-You can also configure the project-wide subtitle appearance, including:
-
-- font size
-- text color
-- background color and opacity
-- outline
-- shadow
-- alignment within the supported MVP policy
-
-Style preview happens in the browser and does not trigger translation or video encoding.
-
-### 8. Generate Vietnamese speech
-
-Start speech generation after approving the Vietnamese translation.
+### 7. Generate Vietnamese speech
 
 For each segment the app can:
 
 1. synthesize Vietnamese speech with VieNeu,
 2. trim edge silence,
-3. measure the actual duration,
+3. measure actual duration,
 4. apply bounded speed-up when needed,
 5. optionally request a shorter local rewrite,
 6. surface unresolved segments for manual review.
 
-Review any segment marked as needing attention before final rendering.
+### 8. Render and download
 
-### 9. Render the localized video
-
-Once all required speech segments are ready, choose how to treat the original audio:
-
-- retain it at full volume,
-- reduce it under the Vietnamese speech,
-- remove it.
-
-Start the render. FFmpeg burns the approved Vietnamese subtitles, mixes the audio tracks, and creates the final H.264/AAC output.
-
-The backend validates the rendered media before exposing the download link.
-
-### 10. Download the result
-
-After validation succeeds, download the final localized MP4 from the render review screen.
+Choose how to treat original audio: retain, reduce, or remove. FFmpeg burns the approved Vietnamese subtitles, mixes audio, validates the output, and exposes the final MP4 only after validation succeeds.
 
 ## Observability
-
-A local OpenTelemetry stack is available for runtime inspection.
 
 Start the application with Prometheus, Jaeger, and Grafana:
 
@@ -372,7 +314,7 @@ docker compose \
   up -d --build --wait
 ```
 
-Default local endpoints:
+Default endpoints:
 
 - Grafana: `http://127.0.0.1:3200`
 - Prometheus: `http://127.0.0.1:9090`
@@ -380,39 +322,34 @@ Default local endpoints:
 
 ## Development
 
-Install the pinned host dependencies, then bootstrap the workspace:
+Pinned host toolchain:
+
+- Node.js `22.22.x`
+- pnpm `11.15.x`
+- Python `3.12.13`
+- uv `0.11.3`
+- FFmpeg / ffprobe
+
+Bootstrap and run normal checks:
 
 ```bash
 make bootstrap
-```
-
-Run all normal static checks and tests:
-
-```bash
 make check
 ```
 
-Run PostgreSQL, Garage, and migration integration tests:
+Integration tests:
 
 ```bash
 make test-integration
 ```
 
-Build the web application:
+Build:
 
 ```bash
 make build
 ```
 
-Run individual processes after their dependencies are available:
-
-```bash
-make api
-make worker
-make web
-```
-
-Useful repository targets:
+Useful targets:
 
 | Command | Purpose |
 | --- | --- |
@@ -420,32 +357,14 @@ Useful repository targets:
 | `make lint` | Run linters |
 | `make typecheck` | Run Python and TypeScript type checks |
 | `make test` | Run unit/component tests |
-| `make test-integration` | Run database, object-store, and migration integration tests |
-| `make stack-config` | Validate the base Compose topology |
-| `make stack-up` | Start the safe base stack using committed development defaults |
+| `make test-integration` | Run PostgreSQL, object-store, and migration integration tests |
+| `make stack-config` | Validate base Compose topology |
+| `make stack-up` | Start the safe base stack |
 | `make stack-smoke` | Smoke-test the base local stack |
-| `make stack-smoke-phase2` | Exercise upload → validation → proxy generation → playback |
+| `make stack-smoke-phase2` | Exercise upload → validation → proxy → playback |
 | `make stack-down` | Stop the base stack while preserving volumes |
 
-> The `make stack-*` convenience targets intentionally use the committed `.env.example` development defaults. For the real translation/TTS/render configuration in your personal `.env`, use the explicit Docker Compose commands shown above.
-
-## Testing and CI
-
-GitHub Actions currently verifies:
-
-- Python formatting with Ruff
-- Python linting
-- mypy type checking
-- pytest with coverage
-- PostgreSQL / Garage / Alembic integration tests
-- TypeScript formatting and linting
-- TypeScript type checking
-- web tests
-- production Next.js build
-- Docker Compose configuration
-- multi-architecture API, web, and worker image builds on `main`
-
-Normal CI never makes a paid translation-provider call.
+Normal CI never calls a paid translation provider.
 
 ## Project structure
 
@@ -459,52 +378,21 @@ packages/
   domain/       Pure domain rules and entities
   application/  Use cases and provider ports
   infrastructure/
-                PostgreSQL, storage, workflow, and telemetry adapters
-  providers/    OCR, translation, TTS, FFmpeg, and rewrite adapters
+                PostgreSQL, storage, workflow, runtime settings, telemetry
+  providers/    OCR, translation, TTS, FFmpeg, rewrite adapters
 
 db/             Alembic migrations
 deploy/         Docker Compose and observability configuration
-docs/           Architecture, ADRs, workflows, policies, and roadmap
-scripts/        Smoke tests, integration checks, and local benchmarks
+docs/           Architecture, ADRs, workflows, policies, roadmap
+scripts/        Smoke tests, integration checks, local benchmarks
 ```
-
-The backend follows a modular-monolith design. OCR, translation, TTS, rendering, storage, and workflow engines remain behind explicit ports so provider-specific code does not leak into the core domain.
-
-## Documentation
-
-For deeper implementation details:
-
-- [`docs/product-overview.md`](docs/product-overview.md) — product scope and complete workflow
-- [`docs/architecture.md`](docs/architecture.md) — system architecture
-- [`docs/workflow-state-machine.md`](docs/workflow-state-machine.md) — durable workflow design
-- [`docs/translation-context.md`](docs/translation-context.md) — context and translation strategy
-- [`docs/duration-fitting.md`](docs/duration-fitting.md) — speech duration fitting policy
-- [`docs/subtitle-styling.md`](docs/subtitle-styling.md) — subtitle style contract
-- [`docs/deployment-strategy.md`](docs/deployment-strategy.md) — deployment model
-- [`docs/observability.md`](docs/observability.md) — telemetry stack
-- [`docs/testing-strategy.md`](docs/testing-strategy.md) — test strategy
-- [`docs/roadmap.md`](docs/roadmap.md) — implementation roadmap and current phase
-- [`docs/final-mvp-acceptance.md`](docs/final-mvp-acceptance.md) — final end-to-end acceptance checklist
 
 ## Scope
 
-This MVP is deliberately narrow. It is designed for videos with ordinary Chinese subtitles in a predictable lower-frame region.
+The MVP targets videos with ordinary Chinese subtitles in a predictable lower-frame region. It does not currently target arbitrary scene-text replacement, inpainting, lip synchronization, voice cloning, DRM ingestion, live streaming, public sharing, multi-user collaboration, or high-availability deployment.
 
-It does **not** currently target:
-
-- arbitrary scene-text replacement
-- image/video inpainting
-- lip synchronization
-- voice cloning
-- speaker diarization guarantees
-- DRM-protected ingestion
-- live streaming
-- public sharing
-- multi-user collaboration
-- high-availability or multi-region deployment
-
-That narrow scope is intentional: the goal is to make the normal Chinese-subtitle → Vietnamese-localized-video workflow reliable before turning the project into a small media empire nobody asked for.
+That narrow scope is intentional: make the normal Chinese-subtitle → Vietnamese-localized-video workflow reliable before building a small media empire nobody asked for.
 
 ## License and media rights
 
-Use only media, fonts, models, and provider services that you are authorized to use. The repository does not grant rights to third-party video content, model weights, fonts, or cloud-provider services.
+Use only media, fonts, models, and provider services that you are authorized to use. This repository does not grant rights to third-party video content, model weights, fonts, or cloud-provider services.
