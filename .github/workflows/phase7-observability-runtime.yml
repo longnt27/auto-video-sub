@@ -28,7 +28,7 @@ jobs:
             -f deploy/compose.yaml \
             -f deploy/compose.observability.yaml \
             up -d jaeger otel-collector prometheus grafana
-      - name: Wait for observability UIs
+      - name: Wait for observability services
         run: |
           set -euo pipefail
           compose=(
@@ -36,25 +36,55 @@ jobs:
             -f deploy/compose.yaml
             -f deploy/compose.observability.yaml
           )
+
+          dump_service() {
+            local service="$1"
+            echo "::group::${service} diagnostics"
+            "${compose[@]}" ps -a "$service" || true
+            "${compose[@]}" logs --no-color --tail=200 "$service" || true
+            echo "::endgroup::"
+          }
+
+          assert_running() {
+            local service="$1"
+            local container_id
+            local state
+            container_id="$("${compose[@]}" ps -q "$service")"
+            if [[ -z "$container_id" ]]; then
+              echo "::error::$service has no container"
+              dump_service "$service"
+              return 1
+            fi
+            state="$(docker inspect --format '{{.State.Status}}' "$container_id")"
+            if [[ "$state" != "running" ]]; then
+              echo "::error::$service container state is $state"
+              dump_service "$service"
+              return 1
+            fi
+          }
+
           wait_for() {
-            name="$1"
-            url="$2"
-            for attempt in $(seq 1 30); do
-              if curl --fail --silent "$url" >/dev/null; then
+            local name="$1"
+            local service="$2"
+            local url="$3"
+            for attempt in $(seq 1 45); do
+              assert_running "$service"
+              if curl --fail --silent --show-error "$url" >/dev/null 2>&1; then
                 echo "$name is ready"
                 return 0
               fi
               sleep 2
             done
             echo "::error::$name did not become ready at $url"
-            "${compose[@]}" ps -a
-            "${compose[@]}" logs --no-color --tail=200 \
-              jaeger otel-collector prometheus grafana
+            dump_service "$service"
             return 1
           }
-          wait_for prometheus http://127.0.0.1:9090/-/ready
-          wait_for grafana http://127.0.0.1:3200/api/health
-          wait_for jaeger http://127.0.0.1:16686/api/services
+
+          assert_running otel-collector
+          wait_for prometheus prometheus http://127.0.0.1:9090/-/ready
+          wait_for grafana grafana http://127.0.0.1:3200/api/health
+          wait_for jaeger-health jaeger http://127.0.0.1:13133/status
+          wait_for jaeger-query jaeger http://127.0.0.1:16686/api/services
       - name: Emit metric and trace through OTLP
         run: |
           uv run python - <<'PY'
@@ -80,6 +110,7 @@ jobs:
           PY
       - name: Verify Prometheus and Jaeger received telemetry
         run: |
+          set -euo pipefail
           for attempt in $(seq 1 20); do
             metrics="$(curl --fail --silent --get \
               --data-urlencode 'query=auto_video_sub_http_requests_total' \
@@ -87,6 +118,7 @@ jobs:
             services="$(curl --fail --silent http://127.0.0.1:16686/api/services)"
             if ! printf '%s' "$metrics" | grep -q '"result":\[\]' \
               && printf '%s' "$services" | grep -q 'auto-video-sub-ci-probe'; then
+              echo "Prometheus and Jaeger received the CI probe"
               exit 0
             fi
             sleep 2
@@ -110,7 +142,7 @@ jobs:
         run: |
           docker compose --env-file .env.example \
             -f deploy/compose.yaml \
-            -f deploy/compose.observability.yaml ps || true
+            -f deploy/compose.observability.yaml ps -a || true
       - name: Stop observability services
         if: always()
         run: |
