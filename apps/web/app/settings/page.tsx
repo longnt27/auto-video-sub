@@ -64,7 +64,7 @@ export default function ProviderSettingsPage() {
     setProvider(nextProvider);
     const option = settings?.providers.find((item) => item.id === nextProvider);
     const isCurrent = settings?.active?.provider === nextProvider;
-    setModel(isCurrent ? settings.active?.model ?? "" : option?.suggested_models[0] ?? "");
+    setModel(isCurrent ? (settings.active?.model ?? "") : (option?.suggested_models[0] ?? ""));
     setApiKey("");
   }
 
@@ -106,8 +106,8 @@ export default function ProviderSettingsPage() {
         <div>
           <h2>Translation provider</h2>
           <p className="control-copy">
-            This setting controls paid Chinese → Vietnamese context extraction and translation.
-            OCR, TTS, rendering, and local rewriting stay local.
+            This setting controls paid Chinese → Vietnamese context extraction and translation. OCR,
+            TTS, rendering, and local rewriting stay local.
           </p>
 
           <form onSubmit={save}>
@@ -135,7 +135,9 @@ export default function ProviderSettingsPage() {
               disabled={busy}
             />
             <datalist id="provider-models">
-              {selected?.suggested_models.map((item) => <option key={item} value={item} />)}
+              {selected?.suggested_models.map((item) => (
+                <option key={item} value={item} />
+              ))}
             </datalist>
             <p className="control-copy">
               Suggested models are shortcuts only. You can type another valid model ID supported by
