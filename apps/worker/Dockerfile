@@ -27,7 +27,9 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends "ffmpeg=${FFMPEG_PACKAGE_VERSION}" \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 app \
-    && useradd --system --uid 10001 --gid app app
+    && useradd --system --uid 10001 --gid app app \
+    && mkdir -p /config \
+    && chown app:app /config
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/apps/worker/src apps/worker/src
