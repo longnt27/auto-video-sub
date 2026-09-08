@@ -28,24 +28,33 @@ jobs:
             -f deploy/compose.yaml \
             -f deploy/compose.observability.yaml \
             up -d jaeger otel-collector prometheus grafana
-      - name: Wait for UIs
+      - name: Wait for observability UIs
         run: |
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:9090/-/ready >/dev/null \
-              && curl --fail --silent http://127.0.0.1:3200/api/health >/dev/null \
-              && curl --fail --silent http://127.0.0.1:16686/ >/dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          docker compose --env-file .env.example \
-            -f deploy/compose.yaml \
-            -f deploy/compose.observability.yaml ps
-          docker compose --env-file .env.example \
-            -f deploy/compose.yaml \
-            -f deploy/compose.observability.yaml logs --no-color \
-            jaeger otel-collector prometheus grafana
-          exit 1
+          set -euo pipefail
+          compose=(
+            docker compose --env-file .env.example
+            -f deploy/compose.yaml
+            -f deploy/compose.observability.yaml
+          )
+          wait_for() {
+            name="$1"
+            url="$2"
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent "$url" >/dev/null; then
+                echo "$name is ready"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "::error::$name did not become ready at $url"
+            "${compose[@]}" ps -a
+            "${compose[@]}" logs --no-color --tail=200 \
+              jaeger otel-collector prometheus grafana
+            return 1
+          }
+          wait_for prometheus http://127.0.0.1:9090/-/ready
+          wait_for grafana http://127.0.0.1:3200/api/health
+          wait_for jaeger http://127.0.0.1:16686/api/services
       - name: Emit metric and trace through OTLP
         run: |
           uv run python - <<'PY'
