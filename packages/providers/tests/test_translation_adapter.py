@@ -126,6 +126,46 @@ async def test_batch_adapter_keeps_owned_segment_ids() -> None:
 
 
 @pytest.mark.asyncio
+async def test_openrouter_requests_usage_and_reads_provider_reported_cost() -> None:
+    segment = TranslationSourceSegment(uuid4(), 0, 1_000_000, "你好")
+    captured: dict[str, object] = {}
+
+    def transport(payload: dict[str, object]):
+        captured.update(payload)
+        result = response(
+            {"items": [{"segment_id": str(segment.id), "text": "Xin chào"}]},
+            input_tokens=12,
+            output_tokens=7,
+        )
+        result["usage"]["cost"] = "0.001234"  # type: ignore[index]
+        return result
+
+    provider = OpenAIResponsesTranslationProvider(
+        api_key="",
+        model="openai/gpt-5.6-luna",
+        provider_name="openrouter",
+        transport=transport,
+    )
+    result = await provider.translate_batch(
+        TranslationBatchRequest(
+            batch_id=uuid4(),
+            owned_segments=(segment,),
+            overlap_segments=(),
+            context_summary="Greeting.",
+            glossary=(),
+            preset=TonePreset.NATURAL,
+            prompt_version="translation-natural-v1",
+            instructions="Translate faithfully.",
+        )
+    )
+
+    assert captured["usage"] == {"include": True}
+    assert result.usage.input_tokens == 12
+    assert result.usage.output_tokens == 7
+    assert result.usage.cost_micros == 1234
+
+
+@pytest.mark.asyncio
 async def test_context_adapter_rejects_hallucinated_evidence_ids() -> None:
     source_id = uuid4()
     provider = OpenAIResponsesTranslationProvider(
