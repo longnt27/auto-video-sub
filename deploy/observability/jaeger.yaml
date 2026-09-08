@@ -6,6 +6,8 @@ extensions:
   jaeger_query:
     storage:
       traces: local_badger
+    http:
+      endpoint: 0.0.0.0:16686
   jaeger_storage:
     backends:
       local_badger:
