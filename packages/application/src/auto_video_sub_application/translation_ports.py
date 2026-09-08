@@ -29,6 +29,7 @@ class TranslationProviderError(RuntimeError):
 class ProviderUsage:
     input_tokens: int
     output_tokens: int
+    cost_micros: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -315,6 +316,7 @@ class TranslationWorkflowRepository(Protocol):
         model: str,
         input_tokens: int,
         output_tokens: int,
+        cost_micros: int | None,
         provider_request_id: str | None,
     ) -> None: ...
 
