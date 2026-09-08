@@ -77,6 +77,7 @@ services:
       - jaeger-data:/badger
     ports:
       - "127.0.0.1:${JAEGER_HOST_PORT:-16686}:16686"
+      - "127.0.0.1:${JAEGER_HEALTH_HOST_PORT:-13133}:13133"
     depends_on:
       jaeger-data-init:
         condition: service_completed_successfully
