@@ -13,8 +13,8 @@ extensions:
       local_badger:
         badger:
           directories:
-            keys: /badger/keys
-            values: /badger/values
+            keys: /badger/data/keys
+            values: /badger/data/values
           ephemeral: false
           ttl:
             spans: 24h
