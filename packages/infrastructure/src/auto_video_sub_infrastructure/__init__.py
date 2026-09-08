@@ -9,6 +9,9 @@ from auto_video_sub_infrastructure import (
 from auto_video_sub_infrastructure import translation_models as _translation_models  # noqa: F401
 from auto_video_sub_infrastructure.database import SessionProvider, create_engine
 from auto_video_sub_infrastructure.probes import build_dependency_probes
+from auto_video_sub_infrastructure.provider_cost_translation_repository import (
+    ProviderReportedCostTranslationRepository,
+)
 from auto_video_sub_infrastructure.provider_settings import LocalTranslationProviderSettingsStore
 from auto_video_sub_infrastructure.render_repository import SqlAlchemyRenderRepository
 from auto_video_sub_infrastructure.render_workflows import TemporalRenderWorkflowControl
@@ -27,6 +30,7 @@ from auto_video_sub_infrastructure.workflows import TemporalWorkflowStarter
 
 __all__ = [
     "LocalTranslationProviderSettingsStore",
+    "ProviderReportedCostTranslationRepository",
     "S3ObjectStorage",
     "SessionProvider",
     "Settings",
