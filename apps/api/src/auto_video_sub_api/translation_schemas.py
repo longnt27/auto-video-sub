@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
+from auto_video_sub_application.provider_settings import (
+    TRANSLATION_PROVIDER_CATALOG,
+    TranslationProviderSettingsView,
+)
 from auto_video_sub_application.translation_ports import (
     TranslationEstimate,
     TranslationSnapshot,
@@ -14,6 +19,61 @@ from pydantic import BaseModel, ConfigDict, Field
 class TonePresetResponse(BaseModel):
     id: TonePreset
     label: str
+
+
+class TranslationProviderOptionResponse(BaseModel):
+    id: str
+    label: str
+    suggested_models: list[str]
+    reports_monetary_cost: bool
+
+
+class TranslationProviderActiveResponse(BaseModel):
+    provider: str
+    model: str
+    api_key_configured: bool
+    api_key_hint: str | None
+
+    @classmethod
+    def from_domain(
+        cls, settings: TranslationProviderSettingsView
+    ) -> TranslationProviderActiveResponse:
+        return cls(
+            provider=settings.provider,
+            model=settings.model,
+            api_key_configured=settings.api_key_configured,
+            api_key_hint=settings.api_key_hint,
+        )
+
+
+class TranslationProviderSettingsResponse(BaseModel):
+    providers: list[TranslationProviderOptionResponse]
+    active: TranslationProviderActiveResponse | None
+
+    @classmethod
+    def build(
+        cls, active: TranslationProviderSettingsView | None
+    ) -> TranslationProviderSettingsResponse:
+        return cls(
+            providers=[
+                TranslationProviderOptionResponse(
+                    id=item.id,
+                    label=item.label,
+                    suggested_models=list(item.suggested_models),
+                    reports_monetary_cost=item.reports_monetary_cost,
+                )
+                for item in TRANSLATION_PROVIDER_CATALOG
+            ],
+            active=(TranslationProviderActiveResponse.from_domain(active) if active else None),
+        )
+
+
+class UpdateTranslationProviderSettingsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(min_length=1, max_length=32)
+    model: str = Field(min_length=1, max_length=160)
+    api_key: str | None = Field(default=None, min_length=1, max_length=4096)
 
 
 class EstimateTranslationRequest(BaseModel):
@@ -29,7 +89,7 @@ class TranslationEstimateResponse(BaseModel):
     source_characters: int
     estimated_input_tokens: int
     estimated_output_tokens: int
-    estimated_cost_micros: int
+    estimated_cost_micros: None = None
 
     @classmethod
     def from_domain(cls, estimate: TranslationEstimate) -> TranslationEstimateResponse:
@@ -40,7 +100,7 @@ class TranslationEstimateResponse(BaseModel):
             source_characters=estimate.source_characters,
             estimated_input_tokens=estimate.estimated_input_tokens,
             estimated_output_tokens=estimate.estimated_output_tokens,
-            estimated_cost_micros=estimate.estimated_cost_micros,
+            estimated_cost_micros=None,
         )
 
 
@@ -49,7 +109,6 @@ class StartTranslationRequest(BaseModel):
 
     preset: TonePreset = TonePreset.NATURAL
     confirm_paid: bool = False
-    max_cost_micros: int = Field(ge=0)
 
 
 class ContextEntityInput(BaseModel):
@@ -166,9 +225,10 @@ class TranslationResponse(BaseModel):
     status: str
     version: int
     error_code: str | None
-    estimated_cost_micros: int
-    reserved_cost_micros: int
-    actual_cost_micros: int
+    estimated_cost_micros: None = None
+    reserved_cost_micros: None = None
+    actual_cost_micros: int | None
+    cost_source: Literal["provider_response", "not_reported"]
     policy: TranslationPolicyResponse
     context: ContextVersionResponse | None
     segments: list[TranslationSegmentResponse]
@@ -202,15 +262,22 @@ class TranslationResponse(BaseModel):
                 parent_version_id=snapshot.context.parent_version_id,
                 created_at=snapshot.context.created_at,
             )
+        provider_reports_cost = any(
+            item.id == snapshot.policy.provider and item.reports_monetary_cost
+            for item in TRANSLATION_PROVIDER_CATALOG
+        )
         return cls(
             project_id=snapshot.record.project_id,
             media_asset_id=snapshot.record.media_asset_id,
             status=snapshot.record.status,
             version=snapshot.record.version,
             error_code=snapshot.record.error_code,
-            estimated_cost_micros=snapshot.record.estimated_cost_micros,
-            reserved_cost_micros=snapshot.record.reserved_cost_micros,
-            actual_cost_micros=snapshot.record.actual_cost_micros,
+            estimated_cost_micros=None,
+            reserved_cost_micros=None,
+            actual_cost_micros=(
+                snapshot.record.actual_cost_micros if provider_reports_cost else None
+            ),
+            cost_source=("provider_response" if provider_reports_cost else "not_reported"),
             policy=TranslationPolicyResponse(
                 id=snapshot.policy.id,
                 preset=snapshot.policy.preset,

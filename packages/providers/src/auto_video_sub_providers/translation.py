@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -57,24 +58,52 @@ def _usage(response: dict[str, Any]) -> ProviderUsage:
             code="TRANSLATION_PROVIDER_USAGE_INVALID",
             retryable=False,
         )
-    return ProviderUsage(input_tokens=input_tokens, output_tokens=output_tokens)
+    cost_micros: int | None = None
+    raw_cost = usage.get("cost")
+    if raw_cost is not None and not isinstance(raw_cost, bool):
+        try:
+            decimal_cost = Decimal(str(raw_cost))
+            if decimal_cost < 0:
+                raise InvalidOperation
+            cost_micros = int((decimal_cost * Decimal(1_000_000)).to_integral_value())
+        except (InvalidOperation, ValueError):
+            raise TranslationProviderError(
+                "Translation provider monetary cost is invalid",
+                code="TRANSLATION_PROVIDER_USAGE_INVALID",
+                retryable=False,
+            ) from None
+    return ProviderUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cost_micros=cost_micros,
+    )
 
 
 class OpenAIResponsesTranslationProvider:
+    """OpenAI Responses-compatible translation adapter.
+
+    OpenAI, DeepSeek, and OpenRouter expose the Responses shape used by this app. Provider
+    identity and endpoint are explicit so policy lineage still records the actual vendor.
+    """
+
     def __init__(
         self,
         *,
         api_key: str,
         model: str,
         base_url: str = "https://api.openai.com/v1/responses",
+        provider_name: str = "openai",
         timeout_seconds: int = 90,
         transport: Transport | None = None,
     ) -> None:
         self._api_key = api_key.strip()
         self._model = model.strip()
         self._base_url = base_url
+        self._provider_name = provider_name.strip().casefold()
         self._timeout = timeout_seconds
         self._transport = transport
+        if not self._provider_name:
+            raise ValueError("Translation provider name is required")
         if not self._model:
             raise ValueError("Translation provider model is required")
         if transport is None and not self._api_key:
@@ -82,7 +111,7 @@ class OpenAIResponsesTranslationProvider:
 
     @property
     def provider_name(self) -> str:
-        return "openai"
+        return self._provider_name
 
     @property
     def model_name(self) -> str:
@@ -143,7 +172,7 @@ class OpenAIResponsesTranslationProvider:
         data: dict[str, Any],
         schema: dict[str, Any],
     ) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "model": self._model,
             "instructions": (
                 instructions
@@ -161,6 +190,9 @@ class OpenAIResponsesTranslationProvider:
             },
             "store": False,
         }
+        if self._provider_name == "openrouter":
+            payload["usage"] = {"include": True}
+        return payload
 
     async def extract_context(self, request: ContextExtractionRequest) -> ContextProviderResult:
         segment_ids = {item.id for item in request.segments}

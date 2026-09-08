@@ -12,6 +12,12 @@ from auto_video_sub_domain import (
     ValidationError,
 )
 
+from auto_video_sub_application.provider_settings import (
+    TRANSLATION_PROVIDER_CATALOG,
+    TranslationProviderDefinition,
+    TranslationProviderSettingsStore,
+    TranslationProviderSettingsView,
+)
 from auto_video_sub_application.translation_ports import (
     TranslationEstimate,
     TranslationRepository,
@@ -91,21 +97,47 @@ class TranslationService:
         *,
         repository: TranslationRepository,
         workflows: TranslationWorkflowControl,
-        provider: str,
-        model: str,
-        input_cost_micros_per_million_tokens: int,
-        output_cost_micros_per_million_tokens: int,
+        provider_settings: TranslationProviderSettingsStore,
     ) -> None:
         self._repository = repository
         self._workflows = workflows
-        self._provider = provider.strip()
-        self._model = model.strip()
-        self._input_price = input_cost_micros_per_million_tokens
-        self._output_price = output_cost_micros_per_million_tokens
+        self._provider_settings = provider_settings
 
     @staticmethod
     def tone_catalog() -> tuple[TonePolicyDefinition, ...]:
         return tuple(TONE_POLICIES[preset] for preset in TonePreset)
+
+    @staticmethod
+    def provider_catalog() -> tuple[TranslationProviderDefinition, ...]:
+        return TRANSLATION_PROVIDER_CATALOG
+
+    async def get_provider_settings(self) -> TranslationProviderSettingsView | None:
+        return await self._provider_settings.get_active()
+
+    async def configure_provider(
+        self,
+        *,
+        provider: str,
+        model: str,
+        api_key: str | None,
+    ) -> TranslationProviderSettingsView:
+        try:
+            return await self._provider_settings.configure(
+                provider=provider,
+                model=model,
+                api_key=api_key,
+            )
+        except ValueError as error:
+            raise ValidationError(str(error), code="TRANSLATION_PROVIDER_CONFIG_INVALID") from error
+
+    async def _active_provider(self) -> TranslationProviderSettingsView:
+        configured = await self._provider_settings.get_active()
+        if configured is None or not configured.api_key_configured or not configured.model.strip():
+            raise ValidationError(
+                "Configure a translation provider, model, and API key in Settings first",
+                code="TRANSLATION_PROVIDER_UNCONFIGURED",
+            )
+        return configured
 
     async def estimate(
         self,
@@ -115,7 +147,7 @@ class TranslationService:
         media_asset_id: UUID,
         preset: TonePreset,
     ) -> TranslationEstimate:
-        self._require_provider_configuration()
+        configured = await self._active_provider()
         _, segments = await self._repository.source_for_estimate(
             owner_id=owner_id,
             project_id=project_id,
@@ -125,25 +157,18 @@ class TranslationService:
         if source_characters <= 0:
             raise ConflictError("Approved transcript has no source text to translate")
 
-        # Conservative estimate: context extraction sees the transcript once and translation
-        # sees source plus overlap/context again. Chinese characters are close to one token each,
-        # but the multiplier intentionally leaves headroom for schema/context overhead.
+        # This is a scope estimate only. Monetary cost is never guessed from a local price table;
+        # it is recorded from provider usage when the provider reports it.
         estimated_input_tokens = max(256, source_characters * 3)
         estimated_output_tokens = max(128, source_characters * 2)
-        estimated_cost_micros = (
-            estimated_input_tokens * self._input_price
-            + estimated_output_tokens * self._output_price
-        ) // 1_000_000
-        if (self._input_price > 0 or self._output_price > 0) and estimated_cost_micros == 0:
-            estimated_cost_micros = 1
         return TranslationEstimate(
             preset=preset,
-            provider=self._provider,
-            model=self._model,
+            provider=configured.provider,
+            model=configured.model,
             source_characters=source_characters,
             estimated_input_tokens=estimated_input_tokens,
             estimated_output_tokens=estimated_output_tokens,
-            estimated_cost_micros=estimated_cost_micros,
+            estimated_cost_micros=0,
         )
 
     async def start(
@@ -154,16 +179,11 @@ class TranslationService:
         media_asset_id: UUID,
         preset: TonePreset,
         confirm_paid: bool,
-        max_cost_micros: int,
     ) -> TranslationSnapshot:
         if not confirm_paid:
             raise ValidationError(
                 "Paid translation requires explicit confirmation",
                 code="TRANSLATION_CONFIRMATION_REQUIRED",
-            )
-        if max_cost_micros < 0:
-            raise ValidationError(
-                "Translation cost ceiling is invalid", code="TRANSLATION_BUDGET_INVALID"
             )
         policy = TONE_POLICIES[preset]
         estimate = await self.estimate(
@@ -172,22 +192,17 @@ class TranslationService:
             media_asset_id=media_asset_id,
             preset=preset,
         )
-        if estimate.estimated_cost_micros > max_cost_micros:
-            raise ValidationError(
-                "Translation estimate exceeds the confirmed cost ceiling",
-                code="TRANSLATION_BUDGET_CONFIRMATION_EXCEEDED",
-            )
         record = await self._repository.prepare(
             owner_id=owner_id,
             project_id=project_id,
             media_asset_id=media_asset_id,
             preset=preset,
-            provider=self._provider,
-            model=self._model,
+            provider=estimate.provider,
+            model=estimate.model,
             prompt_version=policy.prompt_version,
             prompt_checksum=policy.checksum,
-            estimated_cost_micros=estimate.estimated_cost_micros,
-            max_cost_micros=max_cost_micros,
+            estimated_cost_micros=0,
+            max_cost_micros=0,
         )
         if (
             record.status
@@ -359,14 +374,3 @@ class TranslationService:
             project_id=project_id,
             media_asset_id=media_asset_id,
         )
-
-    def _require_provider_configuration(self) -> None:
-        if not self._provider or not self._model:
-            raise ValidationError(
-                "Translation provider/model is not configured",
-                code="TRANSLATION_PROVIDER_UNCONFIGURED",
-            )
-        if self._input_price < 0 or self._output_price < 0:
-            raise ValidationError(
-                "Translation pricing is invalid", code="TRANSLATION_PRICING_INVALID"
-            )

@@ -31,12 +31,7 @@ x-python-environment: &python-environment
   DEFAULT_MAX_PROJECTS: "10"
   DEFAULT_MAX_CONCURRENT_UPLOADS: "1"
   DEFAULT_MAX_STORAGE_BYTES: "4294967296"
-  TRANSLATION_PROVIDER_NAME: ${TRANSLATION_PROVIDER_NAME:-openai}
-  TRANSLATION_PROVIDER_BASE_URL: ${TRANSLATION_PROVIDER_BASE_URL:-https://api.openai.com/v1/responses}
-  TRANSLATION_PROVIDER_MODEL: ${TRANSLATION_PROVIDER_MODEL:-}
-  TRANSLATION_INPUT_COST_MICROS_PER_MILLION_TOKENS: ${TRANSLATION_INPUT_COST_MICROS_PER_MILLION_TOKENS:-0}
-  TRANSLATION_OUTPUT_COST_MICROS_PER_MILLION_TOKENS: ${TRANSLATION_OUTPUT_COST_MICROS_PER_MILLION_TOKENS:-0}
-  DEFAULT_TRANSLATION_BUDGET_MICROS: ${DEFAULT_TRANSLATION_BUDGET_MICROS:-0}
+  TRANSLATION_PROVIDER_CONFIG_PATH: /config/translation-provider.json
   TRANSLATION_REQUEST_TIMEOUT_SECONDS: ${TRANSLATION_REQUEST_TIMEOUT_SECONDS:-90}
   TTS_PROVIDER_NAME: ${TTS_PROVIDER_NAME:-vieneu}
   TTS_MODEL_NAME: ${TTS_MODEL_NAME:-VieNeu-TTS-v3-Turbo}
@@ -159,6 +154,8 @@ services:
       <<: *python-environment
       SERVICE_NAME: auto-video-sub-api
       PORT: "8000"
+    volumes:
+      - provider-config:/config
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -220,7 +217,8 @@ services:
       <<: *python-environment
       SERVICE_NAME: auto-video-sub-translation-worker
       WORKER_PROFILE: translation
-      TRANSLATION_PROVIDER_API_KEY: ${TRANSLATION_PROVIDER_API_KEY:-}
+    volumes:
+      - provider-config:/config
     depends_on:
       api:
         condition: service_healthy
@@ -271,3 +269,4 @@ volumes:
   postgres-data:
   garage-meta:
   garage-data:
+  provider-config:

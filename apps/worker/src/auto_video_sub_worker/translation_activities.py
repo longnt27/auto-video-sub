@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from auto_video_sub_application import CONTEXT_INSTRUCTIONS, CONTEXT_PROMPT_VERSION, TONE_POLICIES
+from auto_video_sub_application.provider_settings import TranslationProviderSettingsStore
 from auto_video_sub_application.translation_ports import (
     ContextExtractionRequest,
     TranslationBatchRequest,
@@ -10,6 +11,7 @@ from auto_video_sub_application.translation_ports import (
     TranslationWorkflowRepository,
 )
 from auto_video_sub_domain import TranslationStatus, plan_translation_batches
+from auto_video_sub_providers import OpenAIResponsesTranslationProvider
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
@@ -25,10 +27,32 @@ class TranslationActivities:
         self,
         *,
         repository: TranslationWorkflowRepository,
-        provider: TranslationProvider,
+        provider_settings: TranslationProviderSettingsStore,
+        request_timeout_seconds: int,
     ) -> None:
         self._repository = repository
-        self._provider = provider
+        self._provider_settings = provider_settings
+        self._request_timeout_seconds = request_timeout_seconds
+
+    async def _provider(self, *, provider: str, model: str) -> TranslationProvider:
+        try:
+            credentials = await self._provider_settings.credentials_for(
+                provider=provider,
+                model=model,
+            )
+        except Exception as error:
+            raise ApplicationError(
+                str(error),
+                type="TRANSLATION_PROVIDER_UNCONFIGURED",
+                non_retryable=True,
+            ) from error
+        return OpenAIResponsesTranslationProvider(
+            api_key=credentials.api_key,
+            model=credentials.model,
+            base_url=credentials.base_url,
+            provider_name=credentials.provider,
+            timeout_seconds=self._request_timeout_seconds,
+        )
 
     @activity.defn(name="extract-translation-context-v1")
     async def extract_context(self, payload: dict[str, str]) -> dict[str, str]:
@@ -57,19 +81,11 @@ class TranslationActivities:
                 non_retryable=True,
             )
         policy = await self._repository.get_policy_internal(policy_version_id)
-        if (
-            policy.provider != self._provider.provider_name
-            or policy.model != self._provider.model_name
-        ):
-            raise ApplicationError(
-                "Translation worker provider/model does not match the reserved policy",
-                type="TRANSLATION_PROVIDER_POLICY_MISMATCH",
-                non_retryable=True,
-            )
+        provider = await self._provider(provider=policy.provider, model=policy.model)
         segments = await self._repository.load_source_segments_internal(media_asset_id)
         activity.heartbeat("context-request")
         try:
-            result = await self._provider.extract_context(
+            result = await provider.extract_context(
                 ContextExtractionRequest(
                     project_id=state.project_id,
                     media_asset_id=media_asset_id,
@@ -93,6 +109,7 @@ class TranslationActivities:
                 model=policy.model,
                 input_tokens=result.usage.input_tokens,
                 output_tokens=result.usage.output_tokens,
+                cost_micros=result.usage.cost_micros,
                 provider_request_id=result.provider_request_id,
             )
             return {"context_version_id": str(context.id)}
@@ -160,15 +177,7 @@ class TranslationActivities:
                 type="TRANSLATION_PROMPT_VERSION_MISMATCH",
                 non_retryable=True,
             )
-        if (
-            policy.provider != self._provider.provider_name
-            or policy.model != self._provider.model_name
-        ):
-            raise ApplicationError(
-                "Translation worker provider/model does not match the reserved policy",
-                type="TRANSLATION_PROVIDER_POLICY_MISMATCH",
-                non_retryable=True,
-            )
+        provider = await self._provider(provider=policy.provider, model=policy.model)
         all_segments = await self._repository.load_source_segments_internal(batch.media_asset_id)
         by_id = {item.id: item for item in all_segments}
         try:
@@ -182,7 +191,7 @@ class TranslationActivities:
             ) from error
         activity.heartbeat(f"translation-batch:{batch.ordinal}")
         try:
-            result = await self._provider.translate_batch(
+            result = await provider.translate_batch(
                 TranslationBatchRequest(
                     batch_id=batch.id,
                     owned_segments=owned,
@@ -208,6 +217,7 @@ class TranslationActivities:
                 model=policy.model,
                 input_tokens=result.usage.input_tokens,
                 output_tokens=result.usage.output_tokens,
+                cost_micros=result.usage.cost_micros,
                 provider_request_id=result.provider_request_id,
             )
             return {"translated": len(result.items)}

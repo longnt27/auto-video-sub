@@ -30,6 +30,7 @@ from auto_video_sub_application.ports import (
     TranscriptWorkflowControl,
     WorkflowStarter,
 )
+from auto_video_sub_application.provider_settings import TranslationProviderSettingsStore
 from auto_video_sub_application.render_ports import RenderRepository, RenderWorkflowControl
 from auto_video_sub_application.speech_ports import SpeechRepository, SpeechWorkflowControl
 from auto_video_sub_application.translation_ports import (
@@ -38,6 +39,8 @@ from auto_video_sub_application.translation_ports import (
 )
 from auto_video_sub_domain import DomainError, DurationFitPolicy, MediaLimits
 from auto_video_sub_infrastructure import (
+    LocalTranslationProviderSettingsStore,
+    ProviderReportedCostTranslationRepository,
     S3ObjectStorage,
     SessionProvider,
     Settings,
@@ -46,7 +49,6 @@ from auto_video_sub_infrastructure import (
     SqlAlchemySpeechRepository,
     SqlAlchemySubtitleStyleRepository,
     SqlAlchemyTranscriptRepository,
-    SqlAlchemyTranslationRepository,
     TemporalRenderWorkflowControl,
     TemporalSpeechWorkflowControl,
     TemporalTranslationWorkflowControl,
@@ -88,6 +90,7 @@ def create_app(
     transcript_workflows: TranscriptWorkflowControl | None = None,
     translation_repository: TranslationRepository | None = None,
     translation_workflows: TranslationWorkflowControl | None = None,
+    translation_provider_settings: TranslationProviderSettingsStore | None = None,
     speech_repository: SpeechRepository | None = None,
     speech_workflows: SpeechWorkflowControl | None = None,
     render_repository: RenderRepository | None = None,
@@ -152,24 +155,19 @@ def create_app(
 
         resolved_translation_repository = translation_repository
         if resolved_translation_repository is None and sessions is not None:
-            resolved_translation_repository = SqlAlchemyTranslationRepository(
-                sessions,
-                default_translation_budget_micros=(
-                    resolved_settings.default_translation_budget_micros
-                ),
-                input_cost_micros_per_million_tokens=(
-                    resolved_settings.translation_input_cost_micros_per_million_tokens
-                ),
-                output_cost_micros_per_million_tokens=(
-                    resolved_settings.translation_output_cost_micros_per_million_tokens
-                ),
-            )
+            resolved_translation_repository = ProviderReportedCostTranslationRepository(sessions)
         resolved_translation_workflows = (
             translation_workflows
             or TemporalTranslationWorkflowControl(
                 address=resolved_settings.temporal_address,
                 namespace=resolved_settings.temporal_namespace,
                 task_queue=resolved_settings.temporal_translation_task_queue,
+            )
+        )
+        resolved_translation_provider_settings = (
+            translation_provider_settings
+            or LocalTranslationProviderSettingsStore(
+                resolved_settings.translation_provider_config_path
             )
         )
         resolved_speech_repository = speech_repository
@@ -224,14 +222,7 @@ def create_app(
             TranslationService(
                 repository=resolved_translation_repository,
                 workflows=resolved_translation_workflows,
-                provider=resolved_settings.translation_provider_name,
-                model=resolved_settings.translation_provider_model,
-                input_cost_micros_per_million_tokens=(
-                    resolved_settings.translation_input_cost_micros_per_million_tokens
-                ),
-                output_cost_micros_per_million_tokens=(
-                    resolved_settings.translation_output_cost_micros_per_million_tokens
-                ),
+                provider_settings=resolved_translation_provider_settings,
             )
             if resolved_translation_repository is not None
             else None
@@ -295,7 +286,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=list(resolved_settings.cors_allowed_origins),
         allow_credentials=False,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "OPTIONS"],
         allow_headers=["content-type", "idempotency-key", "x-request-id"],
     )
 

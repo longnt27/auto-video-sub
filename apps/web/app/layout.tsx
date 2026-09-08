@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import "./globals.css";
+import "./provider-settings.css";
 
 export const metadata: Metadata = {
   title: "Auto Video Sub",
@@ -11,7 +12,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <nav className="app-nav" aria-label="Application navigation">
+          <a href="/">Workspace</a>
+          <a href="/settings">AI settings</a>
+        </nav>
+        {children}
+      </body>
     </html>
   );
 }

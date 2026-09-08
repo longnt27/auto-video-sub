@@ -10,13 +10,14 @@ from pathlib import Path
 from auto_video_sub_application import DependencyProbe, check_readiness
 from auto_video_sub_domain import MediaLimits
 from auto_video_sub_infrastructure import (
+    LocalTranslationProviderSettingsStore,
+    ProviderReportedCostTranslationRepository,
     S3ObjectStorage,
     SessionProvider,
     SqlAlchemyProductRepository,
     SqlAlchemyRenderRepository,
     SqlAlchemySpeechRepository,
     SqlAlchemyTranscriptRepository,
-    SqlAlchemyTranslationRepository,
     build_dependency_probes,
     create_engine,
     get_settings,
@@ -27,7 +28,6 @@ from auto_video_sub_providers import (
     FFmpegRenderProcessor,
     FFmpegSpeechAudioProcessor,
     LlamaCppRewriteProvider,
-    OpenAIResponsesTranslationProvider,
     RapidOcrProvider,
     VieNeuTtsProvider,
 )
@@ -113,24 +113,13 @@ async def serve() -> int:
     )
 
     if settings.worker_profile == "translation":
-        translation_repository = SqlAlchemyTranslationRepository(
-            sessions,
-            default_translation_budget_micros=settings.default_translation_budget_micros,
-            input_cost_micros_per_million_tokens=(
-                settings.translation_input_cost_micros_per_million_tokens
-            ),
-            output_cost_micros_per_million_tokens=(
-                settings.translation_output_cost_micros_per_million_tokens
-            ),
-        )
+        translation_repository = ProviderReportedCostTranslationRepository(sessions)
         translation_activities = TranslationActivities(
             repository=translation_repository,
-            provider=OpenAIResponsesTranslationProvider(
-                api_key=settings.translation_provider_api_key,
-                model=settings.translation_provider_model,
-                base_url=settings.translation_provider_base_url,
-                timeout_seconds=settings.translation_request_timeout_seconds,
+            provider_settings=LocalTranslationProviderSettingsStore(
+                settings.translation_provider_config_path
             ),
+            request_timeout_seconds=settings.translation_request_timeout_seconds,
         )
         worker = Worker(
             temporal_client,

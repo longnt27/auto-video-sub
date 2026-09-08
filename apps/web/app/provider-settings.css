@@ -1,0 +1,34 @@
+.app-nav {
+  position: fixed;
+  z-index: 20;
+  top: 0.9rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  background: rgb(7 16 20 / 82%);
+  backdrop-filter: blur(16px);
+}
+
+.app-nav a {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  color: #f5f3ee;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-nav a:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+/* The old workspace rendered locally calculated estimate/reservation amounts. Monetary
+   cost is now provider-reported only, so keep token scope/confirmation and remove those
+   stale price-table surfaces until the review panel consumes the new nullable cost contract. */
+.cost-box > strong,
+.cost-summary {
+  display: none;
+}

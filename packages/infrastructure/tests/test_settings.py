@@ -7,11 +7,16 @@ from pydantic import ValidationError
 def test_settings_accept_explicit_environment_values(monkeypatch: object) -> None:
     monkeypatch.setenv("PORT", "8010")  # type: ignore[attr-defined]
     monkeypatch.setenv("DEPENDENCY_TIMEOUT_SECONDS", "1.5")  # type: ignore[attr-defined]
+    monkeypatch.setenv(  # type: ignore[attr-defined]
+        "TRANSLATION_PROVIDER_CONFIG_PATH",
+        "/tmp/auto-video-sub-provider.json",
+    )
 
     settings = Settings(_env_file=None)
 
     assert settings.port == 8010
     assert settings.dependency_timeout_seconds == 1.5
+    assert settings.translation_provider_config_path == "/tmp/auto-video-sub-provider.json"
 
 
 def test_tailnet_authentication_rejects_the_committed_development_secret() -> None:
@@ -22,8 +27,6 @@ def test_tailnet_authentication_rejects_the_committed_development_secret() -> No
 def test_core_worker_does_not_require_paid_or_promoted_provider_credentials() -> None:
     settings = Settings(
         worker_profile="core",
-        translation_provider_model="",
-        translation_provider_api_key="",
         tts_model_revision="",
         tts_voice_id="",
         rewrite_provider_endpoint="",
@@ -35,23 +38,15 @@ def test_core_worker_does_not_require_paid_or_promoted_provider_credentials() ->
     assert settings.tts_voice_id == ""
 
 
-@pytest.mark.parametrize(
-    ("model", "api_key"),
-    [
-        ("", "secret-key"),
-        ("configured-model", ""),
-    ],
-)
-def test_translation_worker_fails_closed_without_provider_configuration(
-    model: str, api_key: str
-) -> None:
-    with pytest.raises(ValidationError, match="Translation worker requires"):
-        Settings(
-            worker_profile="translation",
-            translation_provider_model=model,
-            translation_provider_api_key=api_key,
-            _env_file=None,
-        )
+def test_translation_worker_reads_provider_credentials_from_runtime_store() -> None:
+    settings = Settings(
+        worker_profile="translation",
+        translation_provider_config_path="/config/translation-provider.json",
+        _env_file=None,
+    )
+
+    assert settings.worker_profile == "translation"
+    assert settings.translation_provider_config_path == "/config/translation-provider.json"
 
 
 def test_speech_precision_rejects_unknown_runtime_variant() -> None:
