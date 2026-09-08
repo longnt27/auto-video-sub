@@ -1,0 +1,22 @@
+groups:
+  - name: auto-video-sub-observability
+    rules:
+      - alert: TelemetryCollectorMetricsMissing
+        expr: up{job="otel-collector"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: OpenTelemetry Collector metrics endpoint is unavailable
+      - alert: ApiHighServerErrorRatio
+        expr: |
+          (
+            sum(rate(auto_video_sub_http_requests_total{http_response_status_code=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(auto_video_sub_http_requests_total[5m])), 1)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API server error ratio has exceeded 5% for five minutes

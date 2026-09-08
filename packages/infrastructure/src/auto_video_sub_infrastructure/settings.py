@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     service_name: str = "auto-video-sub"
     service_version: str = "0.1.0"
     log_level: str = "INFO"
+    otel_enabled: bool = False
+    otel_exporter_otlp_endpoint: str = "http://127.0.0.1:4318"
+    otel_trace_sample_ratio: float = Field(default=1.0, ge=0.0, le=1.0)
+    otel_metric_export_interval_seconds: int = Field(default=10, ge=5, le=300)
     host: str = "0.0.0.0"
     port: int = 8000
 

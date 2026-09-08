@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import timedelta
+from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
@@ -55,6 +56,7 @@ from auto_video_sub_infrastructure import (
     get_settings,
 )
 from auto_video_sub_infrastructure.logging import configure_logging
+from auto_video_sub_infrastructure.telemetry import configure_telemetry
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -94,6 +96,15 @@ def create_app(
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
+    telemetry = configure_telemetry(
+        enabled=resolved_settings.otel_enabled,
+        endpoint=resolved_settings.otel_exporter_otlp_endpoint,
+        service_name=resolved_settings.service_name,
+        service_version=resolved_settings.service_version,
+        environment=resolved_settings.app_env,
+        sample_ratio=resolved_settings.otel_trace_sample_ratio,
+        export_interval_seconds=resolved_settings.otel_metric_export_interval_seconds,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -268,6 +279,7 @@ def create_app(
         finally:
             if engine is not None:
                 await engine.dispose()
+            telemetry.shutdown()
 
     application = FastAPI(
         title="Auto Video Sub API",
@@ -291,17 +303,34 @@ def create_app(
     async def request_context(request: Request, call_next: Any) -> Response:
         request_id = _request_id(request)
         request.state.request_id = request_id
-        response: Response = await call_next(request)
-        response.headers["x-request-id"] = request_id
-        LOGGER.info(
-            "request_completed",
-            extra={
-                "request_id": request_id,
-                "service": resolved_settings.service_name,
-                "user_id": getattr(request.state, "user_id", None),
-            },
-        )
-        return response
+        started = perf_counter()
+        span_attributes = {
+            "http.request.method": request.method,
+            "request.id": request_id,
+        }
+        with telemetry.tracer.start_as_current_span(
+            "http.request",
+            attributes=span_attributes,
+        ) as span:
+            response: Response = await call_next(request)
+            response.headers["x-request-id"] = request_id
+            duration_ms = (perf_counter() - started) * 1000
+            metric_attributes = {
+                "http.request.method": request.method,
+                "http.response.status_code": str(response.status_code),
+            }
+            telemetry.http_requests.add(1, metric_attributes)
+            telemetry.http_duration_ms.record(duration_ms, metric_attributes)
+            span.set_attribute("http.response.status_code", response.status_code)
+            LOGGER.info(
+                "request_completed",
+                extra={
+                    "request_id": request_id,
+                    "service": resolved_settings.service_name,
+                    "user_id": getattr(request.state, "user_id", None),
+                },
+            )
+            return response
 
     @application.exception_handler(DomainError)
     async def domain_error_handler(request: Request, error: DomainError) -> JSONResponse:
