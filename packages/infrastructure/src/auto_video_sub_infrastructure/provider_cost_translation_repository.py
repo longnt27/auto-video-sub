@@ -106,7 +106,8 @@ class ProviderReportedCostTranslationRepository(SqlAlchemyTranslationRepository)
                     TranslationStatus.CANCELLED,
                 }:
                     raise ConflictError(
-                        "Cancel or finish the current translation before changing provider, model, or tone"
+                        "Cancel or finish the current translation before changing "
+                        "provider, model, or tone"
                     )
 
             now = datetime.now(UTC)
