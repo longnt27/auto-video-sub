@@ -38,7 +38,7 @@ class ProviderReportedCostTranslationRepository(SqlAlchemyTranslationRepository)
         model: str,
         input_tokens: int,
         output_tokens: int,
-        cost_micros: int | None,
+        cost_micros: int | None = None,
         provider_request_id: str | None,
     ) -> None:
         if input_tokens < 0 or output_tokens < 0:
