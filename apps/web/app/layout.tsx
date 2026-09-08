@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import "./globals.css";
+import "./provider-settings.css";
 
 export const metadata: Metadata = {
   title: "Auto Video Sub",
