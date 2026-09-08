@@ -24,6 +24,7 @@ The initial architecture was approved for implementation by the owner on 2026-08
 | [0012](0012-structured-subtitle-styles.md) | Structured subtitle styles with pinned fonts | Accepted |
 | [0013](0013-same-origin-tailnet-identity-gateway.md) | Same-origin web gateway for tailnet identity | Accepted |
 | [0014](0014-github-actions-and-ghcr-delivery.md) | GitHub Actions CI and GHCR continuous delivery | Accepted |
+| [0015](0015-runtime-translation-provider-settings.md) | Runtime translation provider settings and provider-reported cost | Accepted |
 
 ## Template
 
