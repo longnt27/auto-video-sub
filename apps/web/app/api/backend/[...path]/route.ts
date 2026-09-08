@@ -5,6 +5,25 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
+async function requestBody(request: NextRequest, path: string[]): Promise<BodyInit | undefined> {
+  if (request.method === "GET" || request.method === "HEAD") return undefined;
+  const buffer = await request.arrayBuffer();
+  const isTranslationStart =
+    request.method === "POST" &&
+    path.length >= 2 &&
+    path.at(-2) === "translation" &&
+    path.at(-1) === "start";
+  if (!isTranslationStart) return buffer;
+
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(buffer)) as Record<string, unknown>;
+    delete payload.max_cost_micros;
+    return JSON.stringify(payload);
+  } catch {
+    return buffer;
+  }
+}
+
 async function forward(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   const { path } = await context.params;
   if (path[0] !== "v1" || path.some((segment) => !/^[A-Za-z0-9_-]+$/.test(segment))) {
@@ -26,12 +45,10 @@ async function forward(request: NextRequest, context: RouteContext): Promise<Nex
     process.env.INTERNAL_PROXY_SECRET ?? "local-development-proxy-secret",
   );
 
-  const body =
-    request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
   const response = await fetch(target, {
     method: request.method,
     headers,
-    body,
+    body: await requestBody(request, path),
     cache: "no-store",
     redirect: "manual",
   });
