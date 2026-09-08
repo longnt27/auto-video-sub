@@ -22,7 +22,10 @@ RUN uv sync --frozen --no-dev --package auto-video-sub-api
 
 FROM python:3.12.13-slim-bookworm AS runtime
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
-RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid app app
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app app \
+    && mkdir -p /config \
+    && chown app:app /config
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/apps/api/src apps/api/src
