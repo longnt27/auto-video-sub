@@ -19,7 +19,7 @@ The workflow is intentionally human-in-the-loop: the app automates OCR, translat
 - Configure **OpenAI, DeepSeek, or OpenRouter directly in the app**.
 - Choose a project-wide translation tone: `natural`, `funny`, `formal`, or `dramatic`.
 - Review and edit Vietnamese translations before approval.
-- Preview structured subtitle styles in the browser and choose a runtime system font family.
+- Preview structured subtitle styles in the browser.
 - Generate Vietnamese speech locally with VieNeu-TTS v3 Turbo.
 - Fit speech into subtitle timing with trimming, bounded speed-up, and optional local rewriting.
 - Render subtitles and Vietnamese speech into a final H.264/AAC MP4 with FFmpeg/libass.
@@ -79,7 +79,7 @@ Download localized MP4
 | Durable workflows | Temporal |
 | Database | PostgreSQL |
 | Object storage | Garage / S3-compatible storage |
-| Media processing | FFmpeg, ffprobe, libass, fontconfig |
+| Media processing | FFmpeg, ffprobe, libass |
 | OCR | RapidOCR / ONNX Runtime |
 | Translation | OpenAI-compatible Responses API: OpenAI, DeepSeek, OpenRouter |
 | Vietnamese TTS | VieNeu-TTS v3 Turbo / ONNX |
@@ -114,7 +114,7 @@ cd auto_video_sub
 cp .env.example .env
 ```
 
-`.env` now contains infrastructure/runtime configuration only. **Do not put translation provider API keys, models, or token pricing in it.** Those are selected from the application UI.
+`.env` contains infrastructure/runtime configuration only. **Do not put translation provider API keys, models, or token pricing in it.** Those are selected from the application UI.
 
 ### 3. Install the local VieNeu TTS model
 
@@ -137,13 +137,7 @@ TTS_PRECISION=fp32
 
 The runtime deliberately does not download a floating TTS model at startup. Missing model, revision, or voice configuration fails closed.
 
-### 4. Subtitle fonts require no setup
-
-Do **not** download, copy, mount, or checksum a `.ttf` file. The render worker resolves subtitle font families through the runtime's normal `fontconfig` stack and ships with baseline Noto and Liberation fonts in the Docker image.
-
-The subtitle editor currently exposes the system families `sans-serif`, `serif`, and `monospace`. Existing projects that already use `Noto Sans` remain renderable because Noto is part of the worker image.
-
-### 5. Optional: configure local Vietnamese rewriting
+### 4. Optional: configure local Vietnamese rewriting
 
 If speech still cannot fit after silence trimming and bounded speed-up, the app can use a local llama.cpp-compatible endpoint for a shorter meaning-preserving Vietnamese rewrite.
 
@@ -265,7 +259,7 @@ The app shows the approximate token scope and requires explicit confirmation bef
 
 ### 6. Review translation and subtitle style
 
-Review Chinese and Vietnamese segments side by side, edit translations as needed, and configure the project-wide subtitle appearance. Font selection uses runtime system families; there is no separate font installation step.
+Review Chinese and Vietnamese segments side by side, edit translations as needed, and configure the project-wide subtitle appearance.
 
 Style preview is browser-side and does not trigger another translation or video render.
 
@@ -282,7 +276,7 @@ For each segment the app can:
 
 ### 8. Render and download
 
-Choose how to treat original audio: retain, reduce, or remove. FFmpeg/libass resolves the selected system font through fontconfig, burns the approved Vietnamese subtitles, mixes audio, validates the output, and exposes the final MP4 only after validation succeeds.
+Choose how to treat original audio: retain, reduce, or remove. FFmpeg burns the approved Vietnamese subtitles, mixes audio, validates the output, and exposes the final MP4 only after validation succeeds.
 
 ## Observability
 
@@ -378,4 +372,4 @@ That narrow scope is intentional: make the normal Chinese-subtitle → Vietnames
 
 ## License and media rights
 
-Use only media, models, and provider services that you are authorized to use. Runtime font packages are installed as application dependencies; no user-provided font file is required. This repository does not grant rights to third-party video content, model weights, or cloud-provider services.
+Use only media, models, and provider services that you are authorized to use. This repository does not grant rights to third-party video content, model weights, or cloud-provider services.
