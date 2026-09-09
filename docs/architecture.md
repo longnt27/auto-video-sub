@@ -22,7 +22,7 @@ flowchart LR
   WorkflowW --> Store
   MediaW --> DB
   MediaW --> Store
-  MediaW --> FFmpeg[FFmpeg / ffprobe]
+  MediaW --> FFmpeg[FFmpeg / ffprobe / libass / fontconfig]
   LocalAI --> DB
   LocalAI --> Store
   LocalAI --> OCR[OCR engine]
@@ -60,7 +60,7 @@ All nodes except the cloud translation LLM run on the local host or its containe
 | Context | entities, relationships, glossary, ambiguity review | translation batches |
 | Translation | tone-prompt catalog, translation-policy versions, batch planning, validated translations, consistency | source timestamps or arbitrary user prompts |
 | Speech | TTS attempts, measured duration, fitting policy | main translation |
-| Rendering | subtitle-style versions, approved font catalog, render manifests, FFmpeg/libass execution, output validation | browser preview state or raw user CSS/ASS |
+| Rendering | subtitle-style versions, system-font family catalog, render manifests, FFmpeg/libass execution, output validation | browser preview state or raw user CSS/ASS/font paths |
 | Workflow | orchestration, executions, retries, cancellation | domain decision rules |
 | Artifacts | immutable metadata, lineage, retention | business status |
 | Usage | quota reservation, token/audio/compute cost ledger | vendor billing truth |
@@ -82,7 +82,7 @@ All nodes except the cloud translation LLM run on the local host or its containe
 | Cloud LLM | Provider-neutral structured-output adapter; OpenAI proposed first, with pinned model/prompt identifiers and recorded usage | Anthropic or Google can implement the same contract; portability is limited by prompt behavior, so contract tests matter | Medium |
 | Local rewrite | llama.cpp HTTP server with a pinned Vietnamese-capable GGUF model and Metal on Apple Silicon | MLX is highly optimized on Mac but less portable; Ollama is convenient but adds another abstraction | Easy behind port |
 | TTS | VieNeu-TTS v3 Turbo through its local ONNX CPU path, using a pinned built-in preset voice and no voice cloning; it is Vietnamese-specific, offline, Apache-2.0-labelled, and designed for Apple Silicon/CPU use | VieNeu v2 CPU is the fallback if v3 early-access stability fails, but uses an older 24 kHz path. Piper failed the owner's listening test. Chatterbox v3 documents Vietnamese as not production quality, Vietnamese F5 weights reviewed so far are non-commercial, and cloud TTS violates the paid-translation-only constraint | Easy behind port; model behavior is medium |
-| Media | Version-pinned FFmpeg/ffprobe with libass subtitle rendering, invoked through a hardened process runner and explicit font assets | GStreamer is powerful but increases pipeline complexity; library wrappers still rely on FFmpeg behavior | Medium |
+| Media | Version-pinned FFmpeg/ffprobe with libass subtitle rendering and fontconfig system-family resolution, invoked through a hardened process runner. Baseline Noto/Liberation fonts ship in the worker image | GStreamer is powerful but increases pipeline complexity; explicit user-mounted font assets are more reproducible across hosts but add needless setup for the single-user deployment | Medium |
 | Observability | OpenTelemetry instrumentation, structured JSON logs, Prometheus, Grafana, and Jaeger locally; start with short retention and omit Loki until log volume justifies it | SaaS observability reduces maintenance but adds recurring cost; a larger local stack consumes memory | Easy/medium |
 | Testing | pytest, Hypothesis where valuable, Testcontainers, Vitest, Testing Library, Playwright, Schemathesis, and k6 | Other runners are viable; this set spans Python, web, API, and load needs without bespoke harnesses | Easy/medium |
 | Local development | macOS host tools plus Compose for PostgreSQL, Temporal, Garage, and application composition roots; `uv`, `pnpm`, lockfiles, and a checked-in task runner | Running everything directly on the host is lighter but less reproducible | Easy |
@@ -103,7 +103,7 @@ Edits use immutable revisions and optimistic concurrency. A new translation or t
 
 Tone selection is project-wide for the MVP. The API accepts a catalog preset ID, resolves it to an immutable translation-policy version and server-owned prompt template, shows the estimated paid rerun impact, and requires an explicit command before superseding translation outputs. Context extraction stays tone-neutral and reusable. A tone change creates new translation batch executions and invalidates their TTS/duration/render descendants; it does not repeat upload, media, OCR, transcript, or global-context work.
 
-Subtitle appearance is project-wide structured state. The API validates a style object against a small approved font catalog and bounded values. The browser maps that exact style to HTML/CSS over the proxy; the renderer maps it to generated ASS/libass inputs with pinned font artifacts. Raw CSS, ASS override text, FFmpeg fragments, host font names, and arbitrary font URLs are never accepted. A style change creates a new style version and invalidates only render manifests/outputs; it never triggers translation, TTS, or proxy encoding.
+Subtitle appearance is project-wide structured state. The API validates a style object against a small system-font family catalog and bounded values. The browser maps that style to HTML/CSS over the proxy; the renderer maps it to generated ASS/libass inputs and resolves the selected family through fontconfig. The worker image supplies baseline fonts, so users do not provision a `.ttf` file or checksum. Raw CSS, ASS override text, FFmpeg fragments, font paths, and arbitrary font URLs are never accepted. A style change creates a new style version and invalidates only render manifests/outputs; it never triggers translation, TTS, or proxy encoding. See ADR-0016.
 
 ## Consistency and transactions
 
