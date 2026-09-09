@@ -24,8 +24,13 @@ FROM python:3.12.13-slim-bookworm AS runtime
 ARG FFMPEG_PACKAGE_VERSION=7:5.1.9-0+deb12u1
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends "ffmpeg=${FFMPEG_PACKAGE_VERSION}" \
+    && apt-get install --yes --no-install-recommends \
+        "ffmpeg=${FFMPEG_PACKAGE_VERSION}" \
+        fontconfig \
+        fonts-liberation2 \
+        fonts-noto-core \
     && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -f \
     && groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app app \
     && mkdir -p /config \

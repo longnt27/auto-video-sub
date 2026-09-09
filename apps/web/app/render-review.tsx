@@ -14,8 +14,7 @@ type RenderSnapshot = {
   audio_policy: AudioPolicy;
   original_audio_gain_ppm: number;
   renderer_version: string;
-  font_filename: string;
-  font_checksum_sha256: string;
+  font_family: string;
   manifest_artifact_id: string | null;
   subtitle_artifact_id: string | null;
   output_artifact_id: string | null;
@@ -197,7 +196,7 @@ export default function RenderReview({
       {render && (
         <div className="cost-summary">
           <span>{render.renderer_version}</span>
-          <span>{render.font_filename}</span>
+          <span>system font · {render.font_family}</span>
           <span>manifest {render.manifest_artifact_id ? "frozen" : "pending"}</span>
           <span>validation {render.validation_artifact_id ? "recorded" : "pending"}</span>
         </div>

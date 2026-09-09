@@ -37,8 +37,6 @@ def _ass_color(hex_color: str, *, alpha: int = 0) -> str:
 
 
 def _safe_ass_text(text: str) -> str:
-    # ASS override syntax has no reliable literal escaping for every parser/version.
-    # Full-width lookalikes preserve the visible character while making user text inert.
     return (
         text.replace("\\", chr(0xFF3C))
         .replace("{", chr(0xFF5B))
@@ -151,7 +149,6 @@ class FFmpegRenderProcessor:
         original_path: Path,
         speech_paths: Mapping[UUID, Path],
         ass_path: Path,
-        font_path: Path,
         output_path: Path,
     ) -> None:
         ordered_tracks = sorted(render_input.speech_tracks, key=lambda item: item.ordinal)
@@ -173,8 +170,7 @@ class FFmpegRenderProcessor:
                 )
             argv.extend(["-i", str(path)])
 
-        fonts_dir = font_path.parent
-        video_filter = f"ass={ass_path}:fontsdir={fonts_dir}"
+        video_filter = f"ass={ass_path}"
         filter_parts: list[str] = []
         audio_labels: list[str] = []
         speech_offset = 1

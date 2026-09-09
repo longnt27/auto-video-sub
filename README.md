@@ -96,7 +96,6 @@ For normal personal use:
 - at least **6 GiB of free disk space** for the base stack, plus source/output media
 - an API key for at least one supported translation provider
 - a local VieNeu-TTS v3 Turbo model snapshot
-- `NotoSans-Regular.ttf` for deterministic final subtitle rendering
 
 Apple Silicon is the primary local deployment target. Application images remain multi-architecture where practical.
 
@@ -115,7 +114,7 @@ cd auto_video_sub
 cp .env.example .env
 ```
 
-`.env` now contains infrastructure/runtime configuration only. **Do not put translation provider API keys, models, or token pricing in it.** Those are selected from the application UI.
+`.env` contains infrastructure/runtime configuration only. **Do not put translation provider API keys, models, or token pricing in it.** Those are selected from the application UI.
 
 ### 3. Install the local VieNeu TTS model
 
@@ -138,29 +137,7 @@ TTS_PRECISION=fp32
 
 The runtime deliberately does not download a floating TTS model at startup. Missing model, revision, or voice configuration fails closed.
 
-### 4. Install the render font
-
-Place Noto Sans Regular at:
-
-```text
-.local/fonts/NotoSans-Regular.ttf
-```
-
-Calculate its SHA-256 checksum on macOS:
-
-```bash
-shasum -a 256 .local/fonts/NotoSans-Regular.ttf
-```
-
-Then set:
-
-```dotenv
-RENDER_FONT_HOST_PATH=./.local/fonts/NotoSans-Regular.ttf
-RENDER_FONT_FILENAME=NotoSans-Regular.ttf
-RENDER_FONT_CHECKSUM_SHA256=<sha256>
-```
-
-### 5. Optional: configure local Vietnamese rewriting
+### 4. Optional: configure local Vietnamese rewriting
 
 If speech still cannot fit after silence trimming and bounded speed-up, the app can use a local llama.cpp-compatible endpoint for a shorter meaning-preserving Vietnamese rewrite.
 
@@ -395,4 +372,4 @@ That narrow scope is intentional: make the normal Chinese-subtitle → Vietnames
 
 ## License and media rights
 
-Use only media, fonts, models, and provider services that you are authorized to use. This repository does not grant rights to third-party video content, model weights, fonts, or cloud-provider services.
+Use only media, models, and provider services that you are authorized to use. This repository does not grant rights to third-party video content, model weights, or cloud-provider services.

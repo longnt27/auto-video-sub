@@ -68,14 +68,15 @@ class MemoryStyleRepository:
 
 
 @pytest.mark.asyncio
-async def test_default_style_and_font_catalog_are_pinned() -> None:
+async def test_default_style_uses_system_font_family() -> None:
     repository = MemoryStyleRepository()
     service = SubtitleStyleService(repository)
     result = await service.get(owner_id=uuid4(), project_id=uuid4(), media_asset_id=uuid4())
 
     assert result.style == DEFAULT_SUBTITLE_STYLE
-    assert FONT_CATALOG[0].id == "noto-sans"
-    assert FONT_CATALOG[0].license == "OFL-1.1"
+    assert FONT_CATALOG[0].id == "system-sans"
+    assert FONT_CATALOG[0].family == "sans-serif"
+    assert {item.family for item in FONT_CATALOG} == {"sans-serif", "serif", "monospace"}
 
 
 @pytest.mark.asyncio
@@ -92,7 +93,7 @@ async def test_save_creates_new_style_version_without_provider_or_render_depende
         project_id=project_id,
         media_asset_id=media_asset_id,
         expected_version=current.version,
-        font_id="noto-sans",
+        font_id="system-serif",
         font_size_pct=6.0,
         text_color="#ffffff",
         outline_color="#111111",
@@ -107,6 +108,8 @@ async def test_save_creates_new_style_version_without_provider_or_render_depende
     assert result.parent_version_id == current.id
     assert repository.saved_style == replace(
         DEFAULT_SUBTITLE_STYLE,
+        font_id="system-serif",
+        font_family="serif",
         font_size_pct=6.0,
         text_color="#FFFFFF",
         outline_color="#111111",
@@ -117,7 +120,7 @@ async def test_save_creates_new_style_version_without_provider_or_render_depende
 
 
 @pytest.mark.asyncio
-async def test_save_rejects_unapproved_font() -> None:
+async def test_save_rejects_non_system_catalog_font() -> None:
     repository = MemoryStyleRepository()
     service = SubtitleStyleService(repository)
 

@@ -1,4 +1,3 @@
-from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -18,9 +17,8 @@ def _job(*, policy: OriginalAudioPolicy, gain: int) -> RenderJob:
         input_fingerprint="a" * 64,
         audio_policy=policy,
         original_audio_gain_ppm=gain,
-        renderer_version="ffmpeg-libass-v1",
-        font_filename="NotoSans-Regular.ttf",
-        font_checksum_sha256="b" * 64,
+        renderer_version="ffmpeg-libass-system-font-v2",
+        font_family="sans-serif",
         manifest_artifact_id=None,
         subtitle_artifact_id=None,
         output_artifact_id=None,
@@ -60,12 +58,3 @@ def test_render_job_rejects_audio_policy_gain_mismatch(
 ) -> None:
     with pytest.raises(ValidationError, match="audio"):
         _job(policy=policy, gain=gain).validate()
-
-
-def test_render_job_requires_pinned_font_checksum() -> None:
-    value = replace(
-        _job(policy=OriginalAudioPolicy.REMOVE, gain=0),
-        font_checksum_sha256="floating-font",
-    )
-    with pytest.raises(ValidationError, match="checksum"):
-        value.validate()

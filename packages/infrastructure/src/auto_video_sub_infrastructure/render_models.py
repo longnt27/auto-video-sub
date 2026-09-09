@@ -43,8 +43,7 @@ class RenderJobModel(Base):
     audio_policy: Mapped[str] = mapped_column(String(32), nullable=False)
     original_audio_gain_ppm: Mapped[int] = mapped_column(Integer, nullable=False)
     renderer_version: Mapped[str] = mapped_column(String(160), nullable=False)
-    font_filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    font_checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    font_family: Mapped[str] = mapped_column(String(160), nullable=False)
     manifest_payload: Mapped[dict[str, Any]] = mapped_column(nullable=False)
     manifest_artifact_id: Mapped[UUID | None] = mapped_column(
         Uuid, ForeignKey("artifacts.id", ondelete="RESTRICT"), nullable=True

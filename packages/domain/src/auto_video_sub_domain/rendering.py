@@ -36,8 +36,7 @@ class RenderJob:
     audio_policy: OriginalAudioPolicy
     original_audio_gain_ppm: int
     renderer_version: str
-    font_filename: str
-    font_checksum_sha256: str
+    font_family: str
     manifest_artifact_id: UUID | None
     subtitle_artifact_id: UUID | None
     output_artifact_id: UUID | None
@@ -52,10 +51,8 @@ class RenderJob:
             raise ValidationError("Render fingerprint is invalid", code="RENDER_INPUT_INVALID")
         if not self.renderer_version.strip() or len(self.renderer_version) > 160:
             raise ValidationError("Renderer version is invalid", code="RENDER_INPUT_INVALID")
-        if not self.font_filename.strip() or len(self.font_filename) > 255:
-            raise ValidationError("Render font filename is invalid", code="RENDER_FONT_INVALID")
-        if _SHA256.fullmatch(self.font_checksum_sha256) is None:
-            raise ValidationError("Render font checksum is invalid", code="RENDER_FONT_INVALID")
+        if not self.font_family.strip() or len(self.font_family) > 160:
+            raise ValidationError("Render font family is invalid", code="RENDER_FONT_INVALID")
         if self.version < 1:
             raise ValidationError("Render version is invalid", code="RENDER_INPUT_INVALID")
         if self.audio_policy is OriginalAudioPolicy.RETAIN:

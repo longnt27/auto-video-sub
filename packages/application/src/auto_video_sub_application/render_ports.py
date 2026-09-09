@@ -47,8 +47,7 @@ class FrozenRenderInput:
     audio_policy: OriginalAudioPolicy
     original_audio_gain_ppm: int
     renderer_version: str
-    font_filename: str
-    font_checksum_sha256: str
+    font_family: str
     input_fingerprint: str
 
 
@@ -91,8 +90,6 @@ class RenderRepository(Protocol):
         audio_policy: OriginalAudioPolicy,
         original_audio_gain_ppm: int,
         renderer_version: str,
-        font_filename: str,
-        font_checksum_sha256: str,
     ) -> RenderJob: ...
 
     async def bind_workflow(
@@ -160,7 +157,6 @@ class RenderProcessor(Protocol):
         original_path: Path,
         speech_paths: Mapping[UUID, Path],
         ass_path: Path,
-        font_path: Path,
         output_path: Path,
     ) -> None: ...
 
