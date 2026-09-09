@@ -2,63 +2,65 @@
 
 ## Goal and scope
 
-The owner can choose one subtitle style for the project and see it immediately over the proxy without encoding video. The final render uses the same structured style and pinned font assets. Per-segment styling, animation, karaoke effects, arbitrary positioning, user-uploaded fonts, raw CSS/ASS, and general graphics composition are outside the MVP.
+The owner can choose one subtitle style for a video and preview it immediately over the proxy without encoding video. The final render consumes the same immutable structured style version. Per-segment styling, animation, karaoke effects, arbitrary positioning, user-uploaded fonts, raw CSS/ASS, and general graphics composition remain outside the MVP.
 
 ## Style contract
 
-Every persisted style save creates or reuses an immutable `SubtitleStyleVersion`; a project pointer selects the current version. Slider/color interactions update local preview immediately and are debounced or explicitly committed, so dragging a control does not create an unbounded revision stream. The API accepts only typed, bounded fields:
+Every persisted save creates an immutable `SubtitleStyleVersion`. The API accepts only typed, bounded fields:
 
 | Field | MVP behavior |
 |---|---|
-| `font_asset_id` | ID from the approved font catalog, never a host family name or path |
-| `font_size_per_mille` | Fixed-point size relative to active video height so proxy and output resolutions scale consistently |
-| `font_weight` | Only weights present in the selected font asset, initially normal or bold |
-| `italic` | Boolean, only when the selected font provides or permits an italic face |
-| `text_color` | Canonical RGBA value |
-| `outline_color`, `outline_width_per_mille` | Subtitle border/outline with bounded relative width |
-| `shadow` | Bounded enabled flag, relative offset/blur, and RGBA color |
-| `background` | Optional bounded box opacity/color and padding |
-| `line_spacing_per_mille` | Bounded relative spacing for two-line subtitles |
-| `horizontal_alignment` | Initially left, center, or right within the subtitle safe area |
-| `max_width_per_mille` | Maximum line-box width relative to active video width |
-| `bottom_margin_per_mille` | Distance from the active video bottom safe area |
+| `font_id` | Server-defined system-font alias; never a filesystem path or URL |
+| `font_family` | Canonical runtime family resolved by browser CSS / renderer fontconfig |
+| `font_size_pct` | 3–8% of video height |
+| `text_color` | Canonical RGB hex |
+| `outline_color` | Canonical RGB hex |
+| `background_color` | Canonical RGB hex |
+| `background_opacity_pct` | 0–90% |
+| `outline_px` | 0–4 px |
+| `shadow_px` | 0–4 px |
+| `alignment` | Center only in the current MVP |
 
-The server canonicalizes colors, fixed-point values, and enums before hashing/versioning. Numerical limits are configuration with versioned defaults, not browser-only validation. Subtitle timing and text remain separate backend-owned records; style changes cannot alter either.
+Subtitle timing and text remain separate backend-owned records; style changes cannot alter either and never trigger OCR, translation, TTS, or rendering by themselves.
 
-## Font catalog
+## System font families
 
-The MVP ships a small, reviewed catalog rather than reading fonts installed on the host. Each font asset records family/face identifiers, supported Vietnamese glyph coverage, weight/style, source version, license/provenance, checksum, browser artifact, renderer artifact, and fallback policy. Browser and renderer files must derive from the same pinned font release.
+The normal user does not install or provision a render font. The supported style catalog represents runtime system families rather than font files. The current choices are:
 
-Missing font files or glyph coverage are render-validation failures, not permission to silently substitute a host font. Arbitrary font upload and remote font URLs remain out of scope because they add licensing, malware/parser, storage, and preview-parity risks.
+- `sans-serif`
+- `serif`
+- `monospace`
+
+The render worker image installs fontconfig plus baseline Noto and Liberation font packages as ordinary application dependencies. Existing style versions that reference `Noto Sans` remain renderable.
+
+No API accepts a user-controlled font path, font URL, CSS declaration, ASS fragment, or FFmpeg argument. Arbitrary font uploads remain out of scope.
 
 ## Preview and final render
 
-The browser loads the pinned webfont and maps the structured style to an HTML overlay synchronized to the proxy video. It must not accept raw CSS from the API or user. Local UI updates are immediate; persistence uses optimistic concurrency so two tabs cannot silently overwrite each other's selected style.
+The browser maps the structured style to an HTML overlay synchronized to the proxy video. Browser CSS resolves the selected family through its normal font stack.
 
-The backend escapes subtitle text and generates an ASS document from the same style version, then renders it with version-pinned FFmpeg/libass and explicitly mounted font artifacts. Users never supply ASS override tags or FFmpeg filter arguments. The render manifest pins the style version, font checksums, generated ASS artifact, video geometry, and renderer versions.
+The backend escapes subtitle text, generates an ASS document from the same style version, and renders it with FFmpeg/libass. libass resolves the selected family through the worker's fontconfig database. There is no dedicated `.ttf` mount and no user-managed font checksum.
 
-HTML and libass use different layout engines, so pixel identity is not promised. The target is bounded visual parity for font face, relative size, colors, border, line breaks, alignment, and safe-area placement. The editor identifies preview as approximate if a known renderer difference exceeds tolerance; the backend output remains authoritative.
+The render manifest pins the style version, requested `font_family`, `system-fontconfig` resolution mode, video geometry, speech inputs, and renderer version. Exact pixel identity across different operating systems or container-image versions is not promised; the rendered output is authoritative.
 
 ## Versioning and invalidation
 
 - Creating or selecting a style version updates only structured editor state.
 - No translation, TTS, OCR, proxy generation, or paid provider call is triggered.
-- Existing final outputs remain immutable and continue to reference their old style.
-- A newly requested render freezes the selected style and creates a new render manifest/output.
-- Re-selecting an identical canonical style resolves to the same input fingerprint and does not create duplicate render work.
-- Font catalog upgrades create new font asset IDs; they never mutate files used by historical manifests.
+- Existing final outputs remain immutable and keep their old style lineage.
+- A newly requested render freezes the selected style into a new render manifest/output.
+- Re-selecting identical canonical inputs resolves to the same render fingerprint and avoids duplicate work.
 
 ## Validation and security
 
-Validate ownership, optimistic version, field types, numeric ranges, color syntax, font catalog membership, supported weight/style combinations, safe-area bounds, and maximum rendered lines. Escape braces, backslashes, newlines, and other ASS-sensitive characters as text. Never concatenate user text into shell commands, CSS declarations, ASS headers/overrides, font paths, or filter expressions.
+Validate ownership, optimistic version, field types, numeric ranges, color syntax, and membership in the server-defined system-font catalog. Escape braces, backslashes, newlines, and other ASS-sensitive characters as text. Never concatenate user text into shell commands, CSS declarations, ASS headers/overrides, font paths, or filter expressions.
 
-Preview and render endpoints enforce the same project authorization as subtitle text and artifacts. Font files are read-only release assets, not public uploads. Font license notices accompany distribution where required.
+The font-selection change in ADR 0016 supersedes the pinned-font-file portion of ADR 0012. The structured-style and injection-safety decisions from ADR 0012 remain in force.
 
 ## Testing and acceptance
 
-- Unit/property tests cover canonicalization, bounds, stable fingerprints, invalid combinations, and render-only invalidation.
-- Security tests cover CSS/ASS/filter injection strings, path traversal, remote URLs, oversized values, malformed colors, and cross-project style IDs.
-- Browser tests cover immediate control updates, refresh persistence, optimistic conflicts, responsive proxy sizing, and no encode/provider call after style edits.
-- Golden media tests cover Vietnamese diacritics, numbers, punctuation, one/two lines, long wrapping, every approved weight/style, border widths, colors, shadow/background, alignment, and common aspect ratios.
-- Preview-versus-render image comparisons use declared geometry/color tolerances and human visual review before a font or renderer upgrade.
-- Final-output validation confirms the manifest's font/style checksums and checks for missing glyphs, clipped text, unsafe placement, and unexpected font substitution.
+- Unit tests cover style bounds, system-font catalog selection, and render input validation.
+- Security tests cover ASS override syntax and other user-text injection strings.
+- Browser tests cover immediate style preview, persistence, and no encode/provider call after style edits.
+- Render tests cover Vietnamese text, system family resolution, subtitle geometry, and output validation.
+- A clean Docker build must render without any manually supplied font file or checksum.
