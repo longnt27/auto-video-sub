@@ -73,8 +73,7 @@ def _record(row: RenderJobModel) -> RenderJob:
         audio_policy=OriginalAudioPolicy(row.audio_policy),
         original_audio_gain_ppm=row.original_audio_gain_ppm,
         renderer_version=row.renderer_version,
-        font_filename=row.font_filename,
-        font_checksum_sha256=row.font_checksum_sha256,
+        font_family=row.font_family,
         manifest_artifact_id=row.manifest_artifact_id,
         subtitle_artifact_id=row.subtitle_artifact_id,
         output_artifact_id=row.output_artifact_id,
@@ -144,8 +143,7 @@ def _input(row: RenderJobModel) -> FrozenRenderInput:
         audio_policy=OriginalAudioPolicy(row.audio_policy),
         original_audio_gain_ppm=row.original_audio_gain_ppm,
         renderer_version=row.renderer_version,
-        font_filename=row.font_filename,
-        font_checksum_sha256=row.font_checksum_sha256,
+        font_family=row.font_family,
         input_fingerprint=row.input_fingerprint,
     )
 
@@ -163,8 +161,6 @@ class SqlAlchemyRenderRepository:
         audio_policy: OriginalAudioPolicy,
         original_audio_gain_ppm: int,
         renderer_version: str,
-        font_filename: str,
-        font_checksum_sha256: str,
     ) -> RenderJob:
         async with self._sessions.session() as session, session.begin():
             project = await session.scalar(
@@ -267,7 +263,7 @@ class SqlAlchemyRenderRepository:
 
             probe = media.probe
             payload: dict[str, Any] = {
-                "schema_version": "render-manifest-v1",
+                "schema_version": "render-manifest-v2",
                 "project_id": str(project_id),
                 "media_asset_id": str(media_asset_id),
                 "media": {
@@ -299,8 +295,10 @@ class SqlAlchemyRenderRepository:
                 "audio_policy": audio_policy.value,
                 "original_audio_gain_ppm": original_audio_gain_ppm,
                 "renderer_version": renderer_version,
-                "font_filename": font_filename,
-                "font_checksum_sha256": font_checksum_sha256,
+                "font": {
+                    "family": style.font_family,
+                    "resolution": "system-fontconfig",
+                },
             }
             input_fingerprint = _fingerprint(payload)
             existing = await session.scalar(
@@ -333,8 +331,7 @@ class SqlAlchemyRenderRepository:
                 audio_policy=audio_policy,
                 original_audio_gain_ppm=original_audio_gain_ppm,
                 renderer_version=renderer_version,
-                font_filename=font_filename,
-                font_checksum_sha256=font_checksum_sha256,
+                font_family=style.font_family,
                 manifest_payload=payload,
                 manifest_artifact_id=None,
                 subtitle_artifact_id=None,
@@ -400,10 +397,7 @@ class SqlAlchemyRenderRepository:
                 and row.output_artifact_id is not None
             ):
                 artifact = await session.get(ArtifactModel, row.output_artifact_id)
-                if (
-                    artifact is not None
-                    and ArtifactState(artifact.state) is ArtifactState.AVAILABLE
-                ):
+                if artifact is not None and ArtifactState(artifact.state) is ArtifactState.AVAILABLE:
                     output_key = artifact.object_key
             return RenderSnapshot(
                 record=_record(row),

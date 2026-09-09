@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -14,8 +13,6 @@ from auto_video_sub_application.render_ports import (
     RenderWorkflowControl,
 )
 
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
-
 
 class RenderService:
     def __init__(
@@ -25,17 +22,18 @@ class RenderService:
         workflows: RenderWorkflowControl,
         storage: ObjectStorage,
         renderer_version: str,
-        font_filename: str,
-        font_checksum_sha256: str,
         reduced_original_gain_ppm: int,
         download_url_ttl: timedelta,
+        font_filename: str | None = None,
+        font_checksum_sha256: str | None = None,
     ) -> None:
+        # Kept temporarily for composition compatibility with older Settings wiring.
+        # System-font rendering no longer uses or validates either value.
+        del font_filename, font_checksum_sha256
         self._repository = repository
         self._workflows = workflows
         self._storage = storage
         self._renderer_version = renderer_version.strip()
-        self._font_filename = font_filename.strip()
-        self._font_checksum_sha256 = font_checksum_sha256.strip().lower()
         self._reduced_original_gain_ppm = reduced_original_gain_ppm
         self._download_url_ttl = download_url_ttl
 
@@ -56,12 +54,6 @@ class RenderService:
             raise ValidationError(
                 "Renderer version is not configured", code="RENDER_CONFIG_MISSING"
             )
-        if not self._font_filename or len(self._font_filename) > 255:
-            raise ValidationError("Render font is not configured", code="RENDER_CONFIG_MISSING")
-        if _SHA256.fullmatch(self._font_checksum_sha256) is None:
-            raise ValidationError(
-                "Render font checksum is not configured", code="RENDER_CONFIG_MISSING"
-            )
 
     async def start(
         self,
@@ -79,8 +71,6 @@ class RenderService:
             audio_policy=audio_policy,
             original_audio_gain_ppm=self._gain(audio_policy),
             renderer_version=self._renderer_version,
-            font_filename=self._font_filename,
-            font_checksum_sha256=self._font_checksum_sha256,
         )
         if record.status is RenderStatus.SUCCEEDED:
             return await self.get(

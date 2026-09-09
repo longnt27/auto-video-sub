@@ -8,9 +8,9 @@ from auto_video_sub_providers.render import FFmpegRenderProcessor
 
 def _input(text: str) -> FrozenRenderInput:
     style = SubtitleStyleDraft(
-        font_id="noto-sans",
-        font_family="Noto Sans",
-        font_license="OFL-1.1",
+        font_id="system-sans",
+        font_family="sans-serif",
+        font_license="system",
         font_size_pct=5.0,
         text_color="#FFFFFF",
         outline_color="#000000",
@@ -51,9 +51,8 @@ def _input(text: str) -> FrozenRenderInput:
         ),
         audio_policy=OriginalAudioPolicy.REDUCE,
         original_audio_gain_ppm=200_000,
-        renderer_version="ffmpeg-libass-v1",
-        font_filename="NotoSans-Regular.ttf",
-        font_checksum_sha256="c" * 64,
+        renderer_version="ffmpeg-libass-system-font-v2",
+        font_family="sans-serif",
         input_fingerprint="d" * 64,
     )
 
@@ -75,5 +74,5 @@ def test_ass_writer_neutralizes_user_override_syntax(tmp_path) -> None:
     assert chr(0xFF5B) in dialogue
     assert chr(0xFF5D) in dialogue
     assert chr(0xFF3C) in dialogue
-    assert "Noto Sans" in document
+    assert "sans-serif" in document
     assert "0:00:00.50,0:00:02.00" in dialogue

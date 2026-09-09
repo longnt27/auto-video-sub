@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
@@ -28,12 +27,14 @@ class RenderActivities:
         repository: RenderWorkflowRepository,
         storage: RenderObjectStorage,
         processor: RenderProcessor,
-        font_path: Path,
+        font_path: Path | None = None,
     ) -> None:
+        # font_path is accepted only so older composition code can roll forward safely.
+        # System-font rendering does not read or copy that path.
+        del font_path
         self._repository = repository
         self._storage = storage
         self._processor = processor
-        self._font_path = font_path
 
     @staticmethod
     def _sha256(path: Path) -> str:
@@ -46,7 +47,7 @@ class RenderActivities:
     @staticmethod
     def _manifest(render_input: FrozenRenderInput) -> dict[str, object]:
         return {
-            "schema_version": "render-manifest-v1",
+            "schema_version": "render-manifest-v2",
             "render_id": str(render_input.render_id),
             "project_id": str(render_input.project_id),
             "media_asset_id": str(render_input.media_asset_id),
@@ -71,7 +72,7 @@ class RenderActivities:
                 "text_color": render_input.subtitle_style.text_color,
                 "outline_color": render_input.subtitle_style.outline_color,
                 "background_color": render_input.subtitle_style.background_color,
-                "background_opacity_pct": (render_input.subtitle_style.background_opacity_pct),
+                "background_opacity_pct": render_input.subtitle_style.background_opacity_pct,
                 "outline_px": render_input.subtitle_style.outline_px,
                 "shadow_px": render_input.subtitle_style.shadow_px,
                 "alignment": render_input.subtitle_style.alignment.value,
@@ -95,8 +96,8 @@ class RenderActivities:
             "original_audio_gain_ppm": render_input.original_audio_gain_ppm,
             "renderer_version": render_input.renderer_version,
             "font": {
-                "filename": render_input.font_filename,
-                "checksum_sha256": render_input.font_checksum_sha256,
+                "family": render_input.font_family,
+                "resolution": "system-fontconfig",
             },
         }
 
@@ -161,9 +162,6 @@ class RenderActivities:
                 original_path = root / "original"
                 ass_path = root / "subtitles.ass"
                 output_path = root / "localized.mp4"
-                fonts_dir = root / "fonts"
-                fonts_dir.mkdir()
-                local_font_path = fonts_dir / render_input.font_filename
 
                 activity.heartbeat({"stage": "download_original"})
                 await self._storage.download_file(
@@ -176,18 +174,6 @@ class RenderActivities:
                         type="RENDER_INPUT_CHECKSUM_MISMATCH",
                         non_retryable=True,
                     )
-
-                if (
-                    not self._font_path.is_file()
-                    or self._font_path.name != render_input.font_filename
-                    or self._sha256(self._font_path) != render_input.font_checksum_sha256
-                ):
-                    raise ApplicationError(
-                        "Pinned subtitle font is missing or has the wrong checksum",
-                        type="RENDER_FONT_INVALID",
-                        non_retryable=True,
-                    )
-                shutil.copyfile(self._font_path, local_font_path)
 
                 speech_paths: dict[UUID, Path] = {}
                 for track in render_input.speech_tracks:
@@ -223,7 +209,6 @@ class RenderActivities:
                     original_path=original_path,
                     speech_paths=speech_paths,
                     ass_path=ass_path,
-                    font_path=local_font_path,
                     output_path=output_path,
                 )
                 output_artifact = await self._publish(

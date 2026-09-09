@@ -24,8 +24,7 @@ class RenderResponse(BaseModel):
     audio_policy: str
     original_audio_gain_ppm: int
     renderer_version: str
-    font_filename: str
-    font_checksum_sha256: str
+    font_family: str
     manifest_artifact_id: UUID | None
     subtitle_artifact_id: UUID | None
     output_artifact_id: UUID | None
@@ -50,8 +49,7 @@ class RenderResponse(BaseModel):
             audio_policy=record.audio_policy,
             original_audio_gain_ppm=record.original_audio_gain_ppm,
             renderer_version=record.renderer_version,
-            font_filename=record.font_filename,
-            font_checksum_sha256=record.font_checksum_sha256,
+            font_family=record.font_family,
             manifest_artifact_id=record.manifest_artifact_id,
             subtitle_artifact_id=record.subtitle_artifact_id,
             output_artifact_id=record.output_artifact_id,

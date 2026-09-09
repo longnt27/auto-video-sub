@@ -19,14 +19,19 @@ class SubtitleFontDefinition:
     license: str
 
 
+# These are runtime/system font aliases, not files users must download or mount.
+# fontconfig resolves them inside the render worker; the image includes baseline
+# font packages so all three generic families work out of the box.
 FONT_CATALOG: tuple[SubtitleFontDefinition, ...] = (
-    SubtitleFontDefinition(id="noto-sans", family="Noto Sans", license="OFL-1.1"),
+    SubtitleFontDefinition(id="system-sans", family="sans-serif", license="system"),
+    SubtitleFontDefinition(id="system-serif", family="serif", license="system"),
+    SubtitleFontDefinition(id="system-monospace", family="monospace", license="system"),
 )
 
 DEFAULT_SUBTITLE_STYLE = SubtitleStyleDraft(
-    font_id="noto-sans",
-    font_family="Noto Sans",
-    font_license="OFL-1.1",
+    font_id="system-sans",
+    font_family="sans-serif",
+    font_license="system",
     font_size_pct=5.0,
     text_color="#FFFFFF",
     outline_color="#000000",
@@ -101,7 +106,7 @@ class SubtitleStyleService:
         font = next((item for item in FONT_CATALOG if item.id == font_id), None)
         if font is None:
             raise ValidationError(
-                "Subtitle font is not approved", code="SUBTITLE_FONT_NOT_APPROVED"
+                "Subtitle system font is not supported", code="SUBTITLE_FONT_NOT_APPROVED"
             )
         style = SubtitleStyleDraft(
             font_id=font.id,
