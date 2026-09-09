@@ -397,7 +397,10 @@ class SqlAlchemyRenderRepository:
                 and row.output_artifact_id is not None
             ):
                 artifact = await session.get(ArtifactModel, row.output_artifact_id)
-                if artifact is not None and ArtifactState(artifact.state) is ArtifactState.AVAILABLE:
+                if (
+                    artifact is not None
+                    and ArtifactState(artifact.state) is ArtifactState.AVAILABLE
+                ):
                     output_key = artifact.object_key
             return RenderSnapshot(
                 record=_record(row),
